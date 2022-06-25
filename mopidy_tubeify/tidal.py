@@ -109,4 +109,18 @@ class Tidal:
         return search_and_get_best_match(tracks)
 
     def get_service_homepage(self):
+
+        # playlists are the <a> tags, with a href that includes
+        # '/browse/playlist/[playlistid]' and text that is the name of the playlist.
+        #   <a class="text-dec-none visible-offset-0 block ellipsis color-grey-lightest hover-desktop margin-bottom-0"
+        #      href="/browse/playlist/1b418bb8-90a7-4f87-901d-707993838346">
+        #     New Arrivals
+        #   </a>
+
+        soup = self._get_tidal_soup(r"https://tidal.com/browse/")
+
+        # find relevant <a> tags
+        # extract playlistid and playlist name for each
+        # return a list of [{"name": playlist_name, "id": playlist}]
+
         return []
