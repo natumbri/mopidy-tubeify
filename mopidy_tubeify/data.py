@@ -18,3 +18,18 @@ def extract_user_id(uri) -> str:
     if match:
         return match.group("service"), match.group("userid")
     return ""
+
+
+def find_in_obj(obj, condition, kind):
+    # In case this is a list
+    if isinstance(obj, list):
+        for index, value in enumerate(obj):
+            for result in find_in_obj(value, condition, kind):
+                yield result
+    # In case this is a dictionary
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            for result in find_in_obj(value, condition, kind):
+                yield result
+            if condition == key and obj[key] == kind:
+                yield obj

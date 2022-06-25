@@ -6,6 +6,7 @@ from mopidy_youtube.comms import Client
 from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import find_in_obj
 
 
 class Apple(Client):
@@ -86,20 +87,6 @@ class Apple(Client):
             r"^.+platform\.web[^\[]+(?P<content>.+\])\}\"\}$"
         )
         playlistid_re = re.compile(r"^.+playlist/(?P<playlistid>.+$)")
-
-        def find_in_obj(obj, condition, kind):
-            # In case this is a list
-            if isinstance(obj, list):
-                for index, value in enumerate(obj):
-                    for result in find_in_obj(value, condition, kind):
-                        yield result
-            # In case this is a dictionary
-            if isinstance(obj, dict):
-                for key, value in obj.items():
-                    for result in find_in_obj(value, condition, kind):
-                        yield result
-                    if condition == key and obj[key] == kind:
-                        yield obj
 
         endpoint = r"https://music.apple.com/us/browse"
         data = self.session.get(endpoint, headers=self.headers)

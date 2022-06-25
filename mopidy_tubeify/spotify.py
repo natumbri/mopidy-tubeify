@@ -5,6 +5,7 @@ from mopidy_youtube.comms import Client
 from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import find_in_obj
 
 
 class Spotify(Client):
@@ -75,9 +76,17 @@ class Spotify(Client):
                 "isrc": item["track"]["external_ids"].get("isrc"),
             }
             for item in items
+            if item["track"]
         ]
-
         return search_and_get_best_match(tracks)
 
     def get_service_homepage(self):
-        return []
+        endpoint = r"https://api.spotify.com/v1/views/desktop-home"
+        self.get_spotify_headers(r"https://open.spotify.com/")
+        data = self.session.get(endpoint).json()
+        playlists = list(find_in_obj(data, "type", "playlist"))
+
+        return [
+            {"name": playlist["name"], "id": playlist["id"]}
+            for playlist in playlists
+        ]
