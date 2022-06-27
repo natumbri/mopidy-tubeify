@@ -6,6 +6,7 @@ import requests
 from cachetools import TTLCache, cached
 from mopidy import backend, httpclient
 from mopidy.models import Ref
+from ytmusicapi import YTMusic
 
 from mopidy_tubeify import Extension, logger
 from mopidy_tubeify.apple import Apple
@@ -25,6 +26,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.tidal_playlists = config["tubeify"]["tidal_playlists"]
         self.uri_schemes = ["tubeify"]
         self.user_agent = "{}/{}".format(Extension.dist_name, Extension.version)
+        self.ytmusic = YTMusic()
 
     def on_start(self):
         proxy = httpclient.format_proxy(self.config["proxy"])
@@ -32,17 +34,20 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.services = []
         if self.applemusic_playlists:
             self.library.applemusic = Apple(proxy, headers)
+            self.library.applemusic.ytmusic = self.ytmusic
             self.services.append(
                 {"service_uri": "applemusic", "service_name": "Apple Music"}
             )
         if self.spotify_users or self.spotify_playlists:
             self.library.spotify = Spotify(proxy, headers)
+            self.library.spotify.ytmusic = self.ytmusic
             self.services.append(
                 {"service_uri": "spotify", "service_name": "Spotify"}
             )
         if self.tidal_playlists:
             self.library.tidal = Tidal()
             self.library.tidal.session = requests.Session()
+            self.library.tidal.ytmusic = self.ytmusic
             self.services.append(
                 {"service_uri": "tidal", "service_name": "Tidal"}
             )
@@ -116,28 +121,18 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     )
                 )
 
-                if getattr(
-                    self.backend,
-                    f"{selected_service['service_uri']}_users",
-                    None,
-                ):
-                    directoryrefs.append(
-                        Ref.directory(
-                            uri=f"tubeify:{selected_service['service_uri']}:users",
-                            name=f"{selected_service['service_name']} Users",
+                for list_type in ["Users", "Playlists"]:
+                    if getattr(
+                        self.backend,
+                        f"{selected_service['service_uri']}_{list_type.lower()}",
+                        None,
+                    ):
+                        directoryrefs.append(
+                            Ref.directory(
+                                uri=f"tubeify:{selected_service['service_uri']}:{list_type.lower()}",
+                                name=f"{selected_service['service_name']} {list_type}",
+                            )
                         )
-                    )
-                if getattr(
-                    self.backend,
-                    f"{selected_service['service_uri']}_playlists",
-                    None,
-                ):
-                    directoryrefs.append(
-                        Ref.directory(
-                            uri=f"tubeify:{selected_service['service_uri']}:playlists",
-                            name=f"{selected_service['service_name']} Playlists",
-                        )
-                    )
             return directoryrefs
 
         elif match and match["kind"] == "home":

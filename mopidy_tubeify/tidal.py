@@ -1,9 +1,9 @@
 import re
 
 from bs4 import BeautifulSoup as bs
-from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Tidal:
@@ -106,7 +106,7 @@ class Tidal:
 
         tracks = list(track_dict.values())
 
-        return search_and_get_best_match(tracks)
+        return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
 
@@ -117,10 +117,16 @@ class Tidal:
         #     New Arrivals
         #   </a>
 
+        playlistid_re = re.compile(r"/browse/playlist/(?P<playlistid>.+)")
         soup = self._get_tidal_soup(r"https://tidal.com/browse/")
+        playlist_section = soup.find("h2", text="New Playlists").find_parent("section")
+        playlists = playlist_section.find_all("a", {"href": playlistid_re})
 
-        # find relevant <a> tags
-        # extract playlistid and playlist name for each
-        # return a list of [{"name": playlist_name, "id": playlist}]
-
-        return []
+        return [
+            {
+                "name": playlist.text.strip(),
+                "id": playlistid_re.match(playlist["href"])["playlistid"],
+            }
+            for playlist in playlists
+            if playlist.text.strip()
+        ]

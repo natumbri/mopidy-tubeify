@@ -3,16 +3,20 @@ import re
 
 from bs4 import BeautifulSoup as bs
 from mopidy_youtube.comms import Client
-from mopidy_youtube.yt_matcher import search_and_get_best_match
 
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import find_in_obj
+from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Apple(Client):
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 6.1) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/80.0.3987.149 Safari/537.36"
+        )
     }
 
     def get_user_details(self, user):
@@ -79,7 +83,7 @@ class Apple(Client):
             }
 
         tracks = list(track_dict.values())
-        return search_and_get_best_match(tracks)
+        return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
 
