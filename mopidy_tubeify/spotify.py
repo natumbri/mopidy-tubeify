@@ -27,11 +27,19 @@ class Spotify(Client):
         )
         return
 
-    def get_user_details(self, user):
-        endpoint = f"https://api.spotify.com/v1/users/{user}"
+    def get_users_details(self, users):
         self.get_spotify_headers()
-        data = self.session.get(endpoint).json()
-        return data
+
+        def job(user):
+            endpoint = f"https://api.spotify.com/v1/users/{user}"
+            data = self.session.get(endpoint).json()
+            data["name"] = data["display_name"]
+            return data
+
+        results = []
+
+        [results.append(job(user)) for user in users]
+        return results
 
     def get_user_playlists(self, user):
         endpoint = f"https://api.spotify.com/v1/users/{user}/playlists"
@@ -43,7 +51,7 @@ class Spotify(Client):
             for playlist in playlists
         ]
 
-    def get_playlist_details(self, playlists):
+    def get_playlists_details(self, playlists):
         self.get_spotify_headers()
 
         def job(playlist):

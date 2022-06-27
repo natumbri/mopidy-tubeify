@@ -1,17 +1,53 @@
-# original source https://github.com/spotDL/spotify-downloader
-# spotdl/providers/yt_provider.py
+# based on original source from https://github.com/spotDL/spotify-downloader v3
+# https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/yt_provider.py
+# https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/provider_utils.py
 
 from concurrent.futures.thread import ThreadPoolExecutor
+
 # ! Just for static typing
 from typing import List, Optional
 
-from spotdl.providers.provider_utils import (
-    _create_song_title,
-    _match_percentage,
-)
 from unidecode import unidecode
 
 from mopidy_tubeify import logger
+from rapidfuzz import fuzz
+
+
+def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
+    """
+    A wrapper around `rapidfuzz.fuzz.partial_ratio` to handle UTF-8 encoded
+    emojis that usually cause errors
+    `str` `str1` : a random sentence
+    `str` `str2` : another random sentence
+    `float` `score_cutoff` : minimum score required to consider it a match
+        returns 0 when similarity < score_cutoff
+    RETURNS `float`
+    """
+
+    # ! this will throw an error if either string contains a UTF-8 encoded emoji
+    try:
+        return fuzz.partial_ratio(
+            str1, str2, processor=None, score_cutoff=score_cutoff
+        )
+
+    # ! we build new strings that contain only alphanumerical characters and spaces
+    # ! and return the partial_ratio of that
+    except:  # noqa:E722
+        new_str1 = "".join(
+            each_letter
+            for each_letter in str1
+            if each_letter.isalnum() or each_letter.isspace()
+        )
+
+        new_str2 = "".join(
+            each_letter
+            for each_letter in str2
+            if each_letter.isalnum() or each_letter.isspace()
+        )
+
+        return fuzz.partial_ratio(
+            new_str1, new_str2, processor=None, score_cutoff=score_cutoff
+        )
 
 
 def search_and_get_best_match(tracks, ytmusic):
@@ -31,7 +67,11 @@ def search_and_get_best_match(tracks, ytmusic):
 
 
 def _do_search_and_match(
-    song_name: str, song_artists: List[str], isrc: str, ytmusic, song_duration=0, 
+    song_name: str,
+    song_artists: List[str],
+    isrc: str,
+    ytmusic,
+    song_duration: int = 0,
 ) -> Optional[str]:
     """
     `str` `song_name` : name of song
@@ -48,17 +88,23 @@ def _do_search_and_match(
         try:
             isrc_results = ytmusic.search(isrc, limit=1)
             # make sure the isrc result is relevant
-            sorted_isrc_results = _order_yt_results(isrc_results, song_name, song_artists, song_duration)
+            sorted_isrc_results = _order_yt_results(
+                isrc_results, song_name, song_artists, song_duration
+            )
         except Exception as e:
-            logger.warn(f"_do_search_and_match error {e} with isrc {isrc} ({song_name})")
+            logger.warn(
+                f"_do_search_and_match error {e} with isrc {isrc} ({song_name})"
+            )
 
         if sorted_isrc_results:
             sorted_isrc_results[0]["result"]
         else:
             logger.warn(f"No suitable result for isrc {isrc}")
-            logger.warn(f"search for {song_name}, {song_artists}, {song_duration}")
+            logger.warn(
+                f"search for {song_name}, {song_artists}, {song_duration}"
+            )
 
-    song_title = _create_song_title(song_name, song_artists).lower()
+    song_title = f"{', '.join(song_artists)} - {song_name}".lower()
 
     # Query YTM by songs only first, this way if we get correct result on the first try
     # we don't have to make another request to ytmusic api that could result in us
@@ -71,7 +117,9 @@ def _do_search_and_match(
         return None
     # logger.info([result["artists"] for result in results])
     # Order results
-    ordered_song_info_results = _order_yt_results(song_info_results, song_name, song_artists, song_duration)
+    ordered_song_info_results = _order_yt_results(
+        song_info_results, song_name, song_artists, song_duration
+    )
 
     # No matches found
     if len(ordered_song_info_results) == 0:
@@ -80,7 +128,11 @@ def _do_search_and_match(
     # result_items = list(results.items())
 
     # Sort results by highest score
-    sorted_song_info_results = sorted(ordered_song_info_results, key=lambda x: x["average_match"], reverse=True)
+    sorted_song_info_results = sorted(
+        ordered_song_info_results,
+        key=lambda x: x["average_match"],
+        reverse=True,
+    )
 
     # ! In theory, the first 'TUPLE' in sorted_results should have the highest match
     # ! value, we send back only the videoId
@@ -145,7 +197,7 @@ def _order_yt_results(
 
         artist_match = (artist_match_number / len(song_artists)) * 100
 
-        song_title = _create_song_title(song_name, song_artists)
+        song_title = f"{', '.join(song_artists)} - {song_name}".lower()
         name_match = round(
             max(
                 # case where artist is included in title

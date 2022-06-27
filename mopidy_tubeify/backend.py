@@ -121,15 +121,15 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     )
                 )
 
-                for list_type in ["Users", "Playlists"]:
+                for list_type in ["users", "playlists"]:
                     if getattr(
                         self.backend,
-                        f"{selected_service['service_uri']}_{list_type.lower()}",
+                        f"{selected_service['service_uri']}_{list_type}",
                         None,
                     ):
                         directoryrefs.append(
                             Ref.directory(
-                                uri=f"tubeify:{selected_service['service_uri']}:{list_type.lower()}",
+                                uri=f"tubeify:{selected_service['service_uri']}:{list_type}",
                                 name=f"{selected_service['service_name']} {list_type}",
                             )
                         )
@@ -155,53 +155,38 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
             return playlistrefs
 
-        # if we're looking at service users, return a list of the users
-        # as Ref.directory: extract names and uris, return a list of Refs
-        elif match and match["kind"] == "users":
-            userrefs = []
+        # if we're looking at service playlists or users
+        # get the details and return a list
+        elif match and match["kind"] in ["users", "playlists"]:
+            refs = []
             for selected_service in selected_services:
                 service_method = getattr(
                     self, selected_service["service_uri"], None
                 )
-                listofusers = getattr(
-                    self.backend, f"{selected_service['service_uri']}_users", []
+                get_details_method = getattr(
+                    service_method, f'get_{match["kind"]}_details', None
                 )
-                for user in listofusers:
-                    user_details = service_method.get_user_details(user)
-                    userrefs.append(
-                        Ref.directory(
-                            uri=f"tubeify:{selected_service['service_uri']}_user:{user}",
-                            name=user_details["display_name"],
-                        )
-                    )
-            return userrefs
-
-        # if we're looking at service playlists, return a list of the playlists
-        # as Ref.directory: extract names and uris, return a list of Refs
-        elif match and match["kind"] == "playlists":
-            playlistrefs = []
-            for selected_service in selected_services:
-                service_method = getattr(
-                    self, selected_service["service_uri"], None
-                )
-                listofplaylists = getattr(
+                listoflists = getattr(
                     self.backend,
-                    f"{selected_service['service_uri']}_playlists",
+                    f"{selected_service['service_uri']}_{match['kind']}",
                     [],
                 )
-                playlists = service_method.get_playlist_details(listofplaylists)
-                playlistrefs.extend(
+                items = get_details_method(listoflists)
+                refs.extend(
                     [
                         Ref.directory(
-                            uri=f"tubeify:{selected_service['service_uri']}_playlist:{playlist['id']}",
-                            name=playlist["name"],
+                            uri=(
+                                f"tubeify:"
+                                f"{selected_service['service_uri']}_"
+                                f"{match['kind'][:-1]}:"
+                                f"{item['id']}"
+                            ),
+                            name=item["name"],
                         )
-                        for playlist in playlists
-                        if playlist["id"]
+                        for item in items
                     ]
                 )
-
-            return playlistrefs
+            return refs
 
         # if we're looking at a user, return a list of the user's playlists
         elif extract_user_id(uri):
@@ -240,13 +225,20 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             # include ytmusic data for all tracks as preload data in the uri
             # for the first track.  There is surely a better way to do this.
             # It breaks the first track in the musicbox_webclient
+            first_track = [
+                track
+                for track in tracks
+                if "videoId" in track
+                and f"yt:video:{track['videoId']}" == trackrefs[0].uri
+            ][0]
+
             trackrefs[0] = Ref.track(
                 uri=(
-                    f"yt:video:{tracks[0]['videoId']}"
+                    f"yt:video:{first_track['videoId']}"
                     f":preload:"
                     f"{json.dumps([track for track in tracks if track is not None])}"
                 ),
-                name=tracks[0]["title"],
+                name=first_track["title"],
             )
             return trackrefs
 

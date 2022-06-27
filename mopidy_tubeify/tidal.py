@@ -20,10 +20,14 @@ class Tidal:
         soup = bs(fixed_page, "html5lib")
         return soup
 
+    def get_users_details(self, users):
+        logger.warn(f"no Tidal get_user_details, users: {users}")
+        return []
+
     def get_user_playlists(self, playlists):
         pass
 
-    def get_playlist_details(self, playlists):
+    def get_playlists_details(self, playlists):
         def job(playlist):
             soup = self._get_tidal_soup(
                 f"https://tidal.com/browse/playlist/{playlist}"
@@ -119,7 +123,9 @@ class Tidal:
 
         playlistid_re = re.compile(r"/browse/playlist/(?P<playlistid>.+)")
         soup = self._get_tidal_soup(r"https://tidal.com/browse/")
-        playlist_section = soup.find("h2", text="New Playlists").find_parent("section")
+        playlist_section = soup.find("h2", text="New Playlists").find_parent(
+            "section"
+        )
         playlists = playlist_section.find_all("a", {"href": playlistid_re})
 
         return [

@@ -19,15 +19,15 @@ class Apple(Client):
         )
     }
 
-    def get_user_details(self, user):
-        logger.warn(f"no Apple get_user_details, user: {user}")
-        return
+    def get_users_details(self, users):
+        logger.warn(f"no Apple get_user_details, users: {users}")
+        return []
 
     def get_user_playlists(self, user):
         logger.warn(f"no Apple get_user_playlists, user: {user}")
         return
 
-    def get_playlist_details(self, playlists):
+    def get_playlists_details(self, playlists):
         def job(playlist):
             endpoint = f"https://music.apple.com/us/playlist/{playlist}"
             data = self.session.get(endpoint, headers=self.headers)
