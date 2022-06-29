@@ -9,6 +9,7 @@ from mopidy.models import Ref
 from ytmusicapi import YTMusic
 
 from mopidy_tubeify import Extension, logger
+from mopidy_tubeify.allmusic import AllMusic
 from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.spotify import Spotify
@@ -51,6 +52,11 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             self.services.append(
                 {"service_uri": "tidal", "service_name": "Tidal"}
             )
+        self.library.allmusic = AllMusic(proxy, headers)
+        self.library.allmusic.ytmusic = self.ytmusic
+        self.services.append(
+            {"service_uri": "allmusic", "service_name": "AllMusic"}
+        )
 
 
 class TubeifyLibraryProvider(backend.LibraryProvider):
@@ -71,6 +77,40 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
     @cached(cache=tubeify_cache)
     def browse(self, uri):
+        def get_refs(kind, selected_services, listoflists=None):
+            refs = []
+            for selected_service in selected_services:
+                service_method = getattr(
+                    self, selected_service["service_uri"], None
+                )
+                get_details_method = getattr(
+                    service_method, f"get_{kind}_details", None
+                )
+
+                if not listoflists:
+                    listoflists = getattr(
+                        self.backend,
+                        f"{selected_service['service_uri']}_{kind}",
+                        [],
+                    )
+
+                items = get_details_method(listoflists)
+
+                refs.extend(
+                    [
+                        Ref.directory(
+                            uri=(
+                                f"tubeify:"
+                                f"{selected_service['service_uri']}_"
+                                f"{kind[:-1]}:"
+                                f"{item['id']}"
+                            ),
+                            name=item["name"],
+                        )
+                        for item in items
+                    ]
+                )
+            return refs
 
         # if we're browsing, return a list of directories
         if uri == "tubeify:browse":
@@ -158,35 +198,9 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
         # if we're looking at service playlists or users
         # get the details and return a list
         elif match and match["kind"] in ["users", "playlists"]:
-            refs = []
-            for selected_service in selected_services:
-                service_method = getattr(
-                    self, selected_service["service_uri"], None
-                )
-                get_details_method = getattr(
-                    service_method, f'get_{match["kind"]}_details', None
-                )
-                listoflists = getattr(
-                    self.backend,
-                    f"{selected_service['service_uri']}_{match['kind']}",
-                    [],
-                )
-                items = get_details_method(listoflists)
-                refs.extend(
-                    [
-                        Ref.directory(
-                            uri=(
-                                f"tubeify:"
-                                f"{selected_service['service_uri']}_"
-                                f"{match['kind'][:-1]}:"
-                                f"{item['id']}"
-                            ),
-                            name=item["name"],
-                        )
-                        for item in items
-                    ]
-                )
-            return refs
+            return get_refs(
+                kind=match["kind"], selected_services=selected_services
+            )
 
         # if we're looking at a user, return a list of the user's playlists
         elif extract_user_id(uri):
@@ -209,8 +223,21 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
         elif extract_playlist_id(uri):
             service, playlist_uri = extract_playlist_id(uri)
             logger.debug(f"browse {service} playlist {playlist_uri}")
-            trackrefs = []
             service_method = getattr(self, service, None)
+
+            # deal with things that are flagged as lists of lists
+            # not lists of tracks
+            listoflists_match = re.match(
+                r"^listoflists\-(?P<listoflists>.+)$", playlist_uri
+            )
+            if listoflists_match:
+                return get_refs(
+                    "playlists",
+                    [{"service_uri": service}],
+                    listoflists=[listoflists_match["listoflists"]],
+                )
+
+            trackrefs = []
             tracks = service_method.get_playlist_tracks(playlist_uri)
 
             trackrefs = [

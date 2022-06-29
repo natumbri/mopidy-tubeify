@@ -3,14 +3,13 @@
 # https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/provider_utils.py
 
 from concurrent.futures.thread import ThreadPoolExecutor
-
 # ! Just for static typing
 from typing import List, Optional
 
+from rapidfuzz import fuzz
 from unidecode import unidecode
 
 from mopidy_tubeify import logger
-from rapidfuzz import fuzz
 
 
 def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
