@@ -7,6 +7,7 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Tidal:
+    
     def _get_tidal_soup(self, url):
         headers = {
             "User-Agent": (
