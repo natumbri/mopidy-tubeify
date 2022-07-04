@@ -1,15 +1,14 @@
 import json
 
 from bs4 import BeautifulSoup as bs
-from mopidy_tubeify.serviceclient import ServiceClient
 
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import find_in_obj
+from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Spotify(ServiceClient):
-    
     def get_spotify_headers(self, endpoint=r"https://open.spotify.com/"):
         # Getting the access token first to send it with the header to the api endpoint
         page = self.session.get(endpoint)

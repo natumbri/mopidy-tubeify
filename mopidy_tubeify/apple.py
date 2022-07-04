@@ -2,19 +2,18 @@ import json
 import re
 
 from bs4 import BeautifulSoup as bs
-from mopidy_tubeify.serviceclient import ServiceClient
 
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import find_in_obj
+from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Apple(ServiceClient):
-
     def get_playlists_details(self, playlists):
         def job(playlist):
             endpoint = f"https://music.apple.com/us/playlist/{playlist}"
-            data = self.session.get(endpoint, headers=self.headers)
+            data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             playlist_name = soup.find("title").text
             return {"name": playlist_name, "id": playlist}
@@ -28,7 +27,7 @@ class Apple(ServiceClient):
 
     def get_playlist_tracks(self, playlist):
         endpoint = f"https://music.apple.com/us/playlist/{playlist}"
-        data = self.session.get(endpoint, headers=self.headers)
+        data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 
         # this script seems to have a json record of all the tracks
@@ -67,6 +66,7 @@ class Apple(ServiceClient):
             }
 
         tracks = list(track_dict.values())
+        logger.debug(f"total tracks for {playlist}: {len(tracks)}")
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
@@ -77,7 +77,7 @@ class Apple(ServiceClient):
         playlistid_re = re.compile(r"^.+playlist/(?P<playlistid>.+$)")
 
         endpoint = r"https://music.apple.com/us/browse"
-        data = self.session.get(endpoint, headers=self.headers)
+        data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 
         # this script seems to have a json record of all the tracks

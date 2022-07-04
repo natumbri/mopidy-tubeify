@@ -3,11 +3,11 @@ import re
 from bs4 import BeautifulSoup as bs
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
-class Tidal:
-    
+class Tidal(ServiceClient):
     def _get_tidal_soup(self, url):
         headers = {
             "User-Agent": (
@@ -16,7 +16,7 @@ class Tidal:
                 "Chrome/80.0.3987.149 Safari/537.36"
             )
         }
-        page = self.session.get(url, headers=headers, timeout=20)
+        page = self.session.get(url, headers=headers, timeout=15)
         fixed_page = page.text.replace(" */", " */ \n")
         soup = bs(fixed_page, "html5lib")
         return soup

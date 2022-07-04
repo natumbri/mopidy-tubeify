@@ -2,23 +2,24 @@ import json
 import re
 
 from bs4 import BeautifulSoup as bs
-from mopidy_tubeify.serviceclient import ServiceClient
+from mopidy_youtube.timeformat import ISO8601_to_seconds
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class AllMusic(ServiceClient):
-
     def get_playlists_details(self, playlists):
         def job(playlist):
 
             # for featured new releases
             match_FNR = re.match(r"^FNR\-(?P<albumId>.+)$", playlist)
             if match_FNR:
+                logger.debug(f'matched "featured new release" {playlist}')
                 playlist = match_FNR["albumId"]
                 endpoint = f"https://www.allmusic.com/newreleases/{playlist}"
-                data = self.session.get(endpoint, headers=self.headers)
+                data = self.session.get(endpoint)
                 soup = bs(data.text, "html5lib")
                 albumId_re = re.compile(r"^.+/album/(?P<albumId>.+)$")
                 new_releases_filter = soup.find_all("div", class_="new-release")
@@ -53,7 +54,7 @@ class AllMusic(ServiceClient):
             return self.get_playlists_details([playlist])
 
         endpoint = f"https://www.allmusic.com/album/{playlist}"
-        data = self.session.get(endpoint, headers=self.headers)
+        data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
         tracks = []
         json_script = soup.find("script", {"type": "application/ld+json"})
@@ -69,25 +70,8 @@ class AllMusic(ServiceClient):
 
         for track in json_data["tracks"]:
 
-            # convert PT1H2M10S to 3730
-            m = re.search(
-                r"P((?P<weeks>\d+)W)?"
-                + r"((?P<days>\d+)D)?"
-                + r"T((?P<hours>\d+)H)?"
-                + r"((?P<minutes>\d+)M)?"
-                + r"((?P<seconds>\d+)S)?",
-                track.get("duration", "0S"),
-            )
-            if m:
-                val = (
-                    int(m.group("weeks") or 0) * 604800
-                    + int(m.group("days") or 0) * 86400
-                    + int(m.group("hours") or 0) * 3600
-                    + int(m.group("minutes") or 0) * 60
-                    + int(m.group("seconds") or 0)
-                )
-            else:
-                val = 0
+            # convert ISO8601 (PT1H2M10S) to s (3730)
+            val = ISO8601_to_seconds(track.get("duration", "0S"))
 
             track_dict = {
                 "song_name": track["name"],
@@ -105,7 +89,7 @@ class AllMusic(ServiceClient):
     def get_service_homepage(self):
 
         endpoint = r"https://www.allmusic.com/newreleases"
-        data = self.session.get(endpoint, headers=self.headers)
+        data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 
         week_filter = soup.find("select", {"name": "week-filter"})

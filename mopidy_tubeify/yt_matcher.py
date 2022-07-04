@@ -3,6 +3,7 @@
 # https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/provider_utils.py
 
 from concurrent.futures.thread import ThreadPoolExecutor
+
 # ! Just for static typing
 from typing import List, Optional
 
@@ -10,6 +11,30 @@ from rapidfuzz import fuzz
 from unidecode import unidecode
 
 from mopidy_tubeify import logger
+
+
+def search_and_get_best_match(tracks, ytmusic):
+    def search_and_get_best_match_wrapper(track):
+        yt_track = _do_search_and_match(**track, ytmusic=ytmusic)
+        if yt_track:
+            track.update(yt_track)
+        return track
+
+    results = []
+
+    with ThreadPoolExecutor(4) as executor:
+        futures = executor.map(search_and_get_best_match_wrapper, tracks)
+        [results.append(value) for value in futures if value is not None]
+
+    return results
+
+
+def search_and_get_best_album(album, ytmusic):
+    # this is extremely hacky - just searches for "album" in "albums"
+    # and returns a list with one result. no sorting, no checking, etc
+
+    album_info_results = ytmusic.search(album, filter="albums", limit=1)
+    return album_info_results
 
 
 def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
@@ -47,22 +72,6 @@ def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
         return fuzz.partial_ratio(
             new_str1, new_str2, processor=None, score_cutoff=score_cutoff
         )
-
-
-def search_and_get_best_match(tracks, ytmusic):
-    def search_and_get_best_match_wrapper(track):
-        yt_track = _do_search_and_match(**track, ytmusic=ytmusic)
-        if yt_track:
-            track.update(yt_track)
-        return track
-
-    results = []
-
-    with ThreadPoolExecutor(4) as executor:
-        futures = executor.map(search_and_get_best_match_wrapper, tracks)
-        [results.append(value) for value in futures if value is not None]
-
-    return results
 
 
 def _do_search_and_match(

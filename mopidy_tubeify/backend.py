@@ -12,6 +12,9 @@ from mopidy_tubeify import Extension, logger
 from mopidy_tubeify.allmusic import AllMusic
 from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
+
+# from mopidy_tubeify.serviceclient import ServiceClient
+from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
 
@@ -27,11 +30,30 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.tidal_playlists = config["tubeify"]["tidal_playlists"]
         self.uri_schemes = ["tubeify"]
         self.user_agent = "{}/{}".format(Extension.dist_name, Extension.version)
-        self.ytmusic = YTMusic()
 
     def on_start(self):
         proxy = httpclient.format_proxy(self.config["proxy"])
-        headers = {"user-agent": httpclient.format_user_agent(self.user_agent)}
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 6.1) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/80.0.3987.149 Safari/537.36 "
+                f"{httpclient.format_user_agent(self.user_agent)}"
+            )
+        }
+
+        # ytmheaders = {
+        #     "Accept": "*/*",
+        #     "Content-Type": "application/json",
+        #     "origin": "https://music.youtube.com",
+        # }
+        # ytmheaders.update(headers)
+
+        # self.ytmusic = YTMusic(requests_session=ServiceClient(proxy,ytmheaders).session)
+
+        self.ytmusic = YTMusic()
+
         self.services = []
         if self.applemusic_playlists:
             self.library.applemusic = Apple(proxy, headers)
@@ -46,16 +68,24 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
                 {"service_uri": "spotify", "service_name": "Spotify"}
             )
         if self.tidal_playlists:
-            self.library.tidal = Tidal()
+            self.library.tidal = Tidal(proxy, headers)
+            # why doesn't tidal work with a custom session?
             self.library.tidal.session = requests.Session()
             self.library.tidal.ytmusic = self.ytmusic
             self.services.append(
                 {"service_uri": "tidal", "service_name": "Tidal"}
             )
+
         self.library.allmusic = AllMusic(proxy, headers)
         self.library.allmusic.ytmusic = self.ytmusic
         self.services.append(
             {"service_uri": "allmusic", "service_name": "AllMusic"}
+        )
+
+        self.library.pitchfork = Pitchfork(proxy, headers)
+        self.library.pitchfork.ytmusic = self.ytmusic
+        self.services.append(
+            {"service_uri": "pitchfork", "service_name": "Pitchfork"}
         )
 
 
@@ -226,7 +256,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             service_method = getattr(self, service, None)
 
             # deal with things that are flagged as lists of lists
-            # not lists of tracks
+            # (eg, playlists or albums) not lists of tracks
             listoflists_match = re.match(
                 r"^listoflists\-(?P<listoflists>.+)$", playlist_uri
             )
