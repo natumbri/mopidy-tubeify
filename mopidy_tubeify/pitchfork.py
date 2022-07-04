@@ -34,6 +34,12 @@ class Pitchfork(ServiceClient):
                 playlist_results = []
 
                 for item in item_list:
+
+                    if not item['artists']:
+                        # fix this
+                        item['artists'].append({"display_name": item['release_year']})
+                        logger.warn(f"expect wrong album: no artists listed for {item}")
+
                     album = f"{item['artists'][0]['display_name']}, '{item['display_name']}'"
 
                     playlist_results.append(
