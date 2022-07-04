@@ -61,7 +61,6 @@ class Spotify(ServiceClient):
             return {"name": playlist_name, "id": playlist}
 
         results = []
-
         [results.append(job(playlist)) for playlist in playlists]
         return results
 

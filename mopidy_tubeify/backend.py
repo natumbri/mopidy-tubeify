@@ -12,8 +12,6 @@ from mopidy_tubeify import Extension, logger
 from mopidy_tubeify.allmusic import AllMusic
 from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
-
-# from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
@@ -109,6 +107,14 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
     def browse(self, uri):
         def get_refs(kind, selected_services, listoflists=None):
             refs = []
+
+            # need to fix this
+            if len(selected_services) > 1 and listoflists:
+                logger.error(
+                    f"listoflists only works for a single service, "
+                    f"not {selected_services}"
+                )
+
             for selected_service in selected_services:
                 service_method = getattr(
                     self, selected_service["service_uri"], None
@@ -125,6 +131,10 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     )
 
                 items = get_details_method(listoflists)
+
+                # need to fix this, too; listoflists reset to None
+                # for each service in the list of selected services
+                listoflists = None
 
                 refs.extend(
                     [
@@ -152,15 +162,19 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     uri="tubeify:all:playlists", name="All Service Playlists"
                 ),
             ]
+
+            servicerefs = [
+                Ref.directory(
+                    uri=f"tubeify:{service['service_uri']}:root",
+                    name=service["service_name"],
+                )
+                for service in self.backend.services
+            ]
+
             directoryrefs.extend(
-                [
-                    Ref.directory(
-                        uri=f"tubeify:{service['service_uri']}:root",
-                        name=service["service_name"],
-                    )
-                    for service in self.backend.services
-                ]
+                sorted(servicerefs, key=lambda x: x.name.lower())
             )
+
             return directoryrefs
 
         match = re.match(r"tubeify:(?P<service>.+):(?P<kind>.+)$", uri)

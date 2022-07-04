@@ -6,7 +6,10 @@ from mopidy_youtube.timeformat import ISO8601_to_seconds
 
 from mopidy_tubeify import logger
 from mopidy_tubeify.serviceclient import ServiceClient
-from mopidy_tubeify.yt_matcher import search_and_get_best_match
+from mopidy_tubeify.yt_matcher import (
+    search_and_get_best_album,
+    search_and_get_best_match,
+)
 
 
 class AllMusic(ServiceClient):
@@ -27,7 +30,10 @@ class AllMusic(ServiceClient):
                 for new_release in new_releases_filter:
                     playlist_results.append(
                         {
-                            "name": f"{new_release.find('div', class_='artist').text.strip()}, \"{new_release.find('div', class_='title').text.strip()}\"",
+                            "name": (
+                                f"{new_release.find('div', class_='artist').text.strip()}, "
+                                f"\"{new_release.find('div', class_='title').text.strip()}\""
+                            ),
                             "id": albumId_re.match(
                                 new_release.find("div", class_="title").a[
                                     "href"
@@ -60,31 +66,71 @@ class AllMusic(ServiceClient):
         json_script = soup.find("script", {"type": "application/ld+json"})
         json_data = json.loads(json_script.text)
 
-        # if the album is a re-release, get_playlist_tracks from the original
-        if re.match(r"^.+/release/.+$", json_data["url"]):
-            return self.get_playlist_tracks(
-                re.match(
-                    r"^.+/album/(?P<albumId>.+)$", json_data["releaseOf"]["url"]
-                )["albumId"]
+        artists_title = f"{[artist['name'] for artist in json_data.get('byArtist', json_data['releaseOf']['byArtist'])]}, '{json_data['name']}'"
+
+        try:
+            # experimetnal, using ytmusic album instead of track-by-track matching
+            album_browseId = search_and_get_best_album(
+                artists_title, self.ytmusic
+            )[0]["browseId"]
+            album = self.ytmusic.get_album(album_browseId)
+            tracks = album["tracks"]
+
+            fields = ["artists", "thumbnails"]
+            [
+                track.update({field: album[field]})
+                for field in fields
+                for track in tracks
+                if track[field] is None
+            ]
+
+            [
+                track.update(
+                    {
+                        "album": {
+                            "name": album["title"],
+                            "id": album_browseId,
+                        }
+                    }
+                )
+                for track in tracks
+            ]
+
+            return tracks
+
+        except Exception as e:
+
+            logger.warn(
+                f"error {e} getting album {artists_title} "
+                f"from ytmusic; trying individual tracks"
             )
 
-        for track in json_data["tracks"]:
+            # if the album is a re-release, get_playlist_tracks from the original
+            if re.match(r"^.+/release/.+$", json_data["url"]):
+                return self.get_playlist_tracks(
+                    re.match(
+                        r"^.+/album/(?P<albumId>.+)$",
+                        json_data["releaseOf"]["url"],
+                    )["albumId"]
+                )
 
-            # convert ISO8601 (PT1H2M10S) to s (3730)
-            val = ISO8601_to_seconds(track.get("duration", "0S"))
+            for track in json_data["tracks"]:
 
-            track_dict = {
-                "song_name": track["name"],
-                "song_artists": [
-                    artist["name"] for artist in json_data["byArtist"]
-                ],
-                "song_duration": val,
-                "isrc": None,
-            }
+                # convert ISO8601 (PT1H2M10S) to s (3730)
+                val = ISO8601_to_seconds(track.get("duration", "0S"))
 
-            tracks.append(track_dict)
+                track_dict = {
+                    "song_name": track["name"],
+                    "song_artists": [
+                        artist["name"] for artist in json_data["byArtist"]
+                    ],
+                    "song_duration": val,
+                    "isrc": None,
+                }
 
-        return search_and_get_best_match(tracks, self.ytmusic)
+                tracks.append(track_dict)
+
+            return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
 
