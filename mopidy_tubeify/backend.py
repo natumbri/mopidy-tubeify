@@ -15,6 +15,7 @@ from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
+from mopidy_tubeify.tripler import TripleR
 
 
 class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
@@ -84,6 +85,12 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library.pitchfork.ytmusic = self.ytmusic
         self.services.append(
             {"service_uri": "pitchfork", "service_name": "Pitchfork"}
+        )
+
+        self.library.tripler = TripleR(proxy, headers)
+        self.library.tripler.ytmusic = self.ytmusic
+        self.services.append(
+            {"service_uri": "tripler", "service_name": "TripleR"}
         )
 
 
@@ -283,35 +290,44 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
             trackrefs = []
             tracks = service_method.get_playlist_tracks(playlist_uri)
-
-            trackrefs = [
-                Ref.track(
-                    uri=f"yt:video:{track['videoId']}",
-                    name=track["title"],
-                )
-                for track in tracks
-                if "videoId" in track
-            ]
-
-            # include ytmusic data for all tracks as preload data in the uri
-            # for the first track.  There is surely a better way to do this.
-            # It breaks the first track in the musicbox_webclient
-            first_track = [
+            good_tracks = [
                 track
                 for track in tracks
                 if "videoId" in track
-                and f"yt:video:{track['videoId']}" == trackrefs[0].uri
-            ][0]
+                and track["videoId"]
+                and "title" in track
+                and track["title"]
+            ]
+            if good_tracks:
+                trackrefs = [
+                    Ref.track(
+                        uri=f"yt:video:{track['videoId']}",
+                        name=track["title"],
+                    )
+                    for track in good_tracks
+                    # if "videoId" in track and track["videoId"]
+                ]
 
-            trackrefs[0] = Ref.track(
-                uri=(
-                    f"yt:video:{first_track['videoId']}"
-                    f":preload:"
-                    f"{json.dumps([track for track in tracks if track is not None])}"
-                ),
-                name=first_track["title"],
-            )
-            return trackrefs
+                # include ytmusic data for all tracks as preload data in the uri
+                # for the first track.  There is surely a better way to do this.
+                # It breaks the first track in the musicbox_webclient
+                first_track = [
+                    track
+                    for track in good_tracks
+                    if f"yt:video:{track['videoId']}" == trackrefs[0].uri
+                ][0]
+
+                trackrefs[0] = Ref.track(
+                    uri=(
+                        f"yt:video:{first_track['videoId']}"
+                        f":preload:"
+                        f"{json.dumps([track for track in good_tracks if track is not None])}"
+                    ),
+                    name=first_track["title"],
+                )
+                return trackrefs
 
         else:
             logger.warn(f"There was a problem with uri {uri}")
+
+        return []

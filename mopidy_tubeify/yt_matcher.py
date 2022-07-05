@@ -80,6 +80,7 @@ def _do_search_and_match(
     isrc: str,
     ytmusic,
     song_duration: int = 0,
+    videoId: str = None,
 ) -> Optional[str]:
     """
     `str` `song_name` : name of song
@@ -108,6 +109,34 @@ def _do_search_and_match(
             sorted_isrc_results[0]["result"]
         else:
             logger.warn(f"No suitable result for isrc {isrc}")
+            logger.warn(
+                f"search for {song_name}, {song_artists}, {song_duration}"
+            )
+
+    if videoId:
+        sorted_videoId_results = []
+        try:
+            videoId_results = [ytmusic.get_song(videoId)["videoDetails"]]
+            videoId_results[0]["artists"] = [
+                {"name": videoId_results[0]["author"]}
+            ]
+            videoId_results[0]["duration_seconds"] = videoId_results[0][
+                "lengthSeconds"
+            ]
+
+            # make sure the videoId result is relevant
+            sorted_videoId_results = _order_yt_results(
+                videoId_results, song_name, song_artists, song_duration
+            )
+        except Exception as e:
+            logger.warn(
+                f"_do_search_and_match error {e} with videoId {videoId} ({song_name})"
+            )
+
+        if sorted_videoId_results:
+            sorted_videoId_results[0]["result"]
+        else:
+            logger.warn(f"No suitable result for videoId {videoId}")
             logger.warn(
                 f"search for {song_name}, {song_artists}, {song_duration}"
             )
