@@ -117,6 +117,8 @@ def _do_search_and_match(
         sorted_videoId_results = []
         try:
             videoId_results = [ytmusic.get_song(videoId)["videoDetails"]]
+
+            # .get_song["videoDetails"] is slightly different to .search
             videoId_results[0]["artists"] = [
                 {"name": videoId_results[0]["author"]}
             ]
@@ -124,10 +126,12 @@ def _do_search_and_match(
                 "lengthSeconds"
             ]
 
-            # make sure the videoId result is relevant
-            sorted_videoId_results = _order_yt_results(
-                videoId_results, song_name, song_artists, song_duration
-            )
+            # do we need to make sure the videoId result is relevant?
+            # sorted_videoId_results = _order_yt_results(
+            #     videoId_results, song_name, song_artists, song_duration
+            # )
+            sorted_videoId_results = [{"result": videoId_results[0]}]
+
         except Exception as e:
             logger.warn(
                 f"_do_search_and_match error {e} with videoId {videoId} ({song_name})"
@@ -147,12 +151,11 @@ def _do_search_and_match(
     # we don't have to make another request to ytmusic api that could result in us
     # getting rate limited sooner
     song_info_results = ytmusic.search(song_title, filter="songs")
-    # logger.info([result["artists"] for result in song_info_results if not isinstance(result["artists"], list)])
 
     if song_info_results is None:
         logger.warn(f"Couldn't find the song on YouTube Music: {song_title}")
         return None
-    # logger.info([result["artists"] for result in results])
+
     # Order results
     ordered_song_info_results = _order_yt_results(
         song_info_results, song_name, song_artists, song_duration
@@ -265,7 +268,7 @@ def _order_yt_results(
         # ! difference in song duration (delta) is usually of the magnitude of
         # ! a few seconds, we need to amplify the delta if it is to have any
         # ! meaningful impact when we calculate the avg match value
-        if song_duration:
+        if song_duration and song_duration > 0:
             delta = result["duration_seconds"] - song_duration  # ! check this
             non_match_value = (delta ** 2) / song_duration * 100
 

@@ -28,13 +28,23 @@ class TripleR(ServiceClient):
                 endpoint = f"https://www.rrr.org.au/explore/programs/{programId}/episodes/page?page=1"
                 data = self.session.get(endpoint)
                 soup = bs(data.content.decode("utf-8"), "html5lib")
-                cards_soup = soup.find_all("a", class_="card__anchor")
+
+                card_regex = re.compile("^card( .+)?$")
+                cards_soup = soup.find_all("div", class_=card_regex)
+
+                # only bother with cards with View playlist button
+                cards_soup[:] = [
+                    card
+                    for card in cards_soup
+                    if card.find(text="View playlist")
+                ]
+
                 playlist_results = []
                 for card in cards_soup:
                     playlist_results.append(
                         {
-                            "name": card.text,
-                            "id": card["href"],
+                            "name": card.find(class_="card__anchor").text,
+                            "id": card.find(class_="card__anchor").get("href"),
                         }
                     )
                 return playlist_results
@@ -86,20 +96,24 @@ class TripleR(ServiceClient):
 
     def get_service_homepage(self):
 
+        endpoint = "https://www.rrr.org.au/explore/programs"
+        data = self.session.get(endpoint)
+        soup = bs(data.text, "html5lib")
+
+        card_regex = re.compile("^card( .+)?$")
+        cards_soup = soup.find_all("div", class_=card_regex)
+
+        program_regex = re.compile(r"^/explore/programs/(?P<programId>.+)$")
         track_dicts = []
 
-        track_dicts.append(
-            {
-                "name": r"Off The Record",
-                "id": r"listoflists-PROGRAM-off-the-record",
-            }
-        )
-
-        track_dicts.append(
-            {
-                "name": r"Maps",
-                "id": r"listoflists-PROGRAM-maps",
-            }
-        )
+        [
+            track_dicts.append(
+                {
+                    "name": card.find(class_="card__text").a.text,
+                    "id": f"listoflists-PROGRAM-{program_regex.match((card.find(class_='card__text').a.get('href')))['programId']}",
+                }
+            )
+            for card in cards_soup
+        ]
 
         return track_dicts
