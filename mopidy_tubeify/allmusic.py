@@ -67,7 +67,18 @@ class AllMusic(ServiceClient):
         json_script = soup.find("script", {"type": "application/ld+json"})
         json_data = json.loads(json_script.text)
 
-        artists_title = f"{[artist['name'] for artist in json_data.get('byArtist', json_data['releaseOf']['byArtist'])]}, '{json_data['name']}'"
+        if "byArtist" in json_data:
+            artists = [artist["name"] for artist in json_data["byArtist"]]
+        elif "releaseOf" in json_data and "byArtist" in json_data["releaseOf"]:
+            artists = [
+                artist["name"] for artist in json_data["releaseOf"]["byArtist"]
+            ]
+        else:
+            artists = ["Unknown"]
+
+        title = f"{json_data['name']}"
+
+        artists_title = f"{artists}, {title}"
 
         try:
             # experimetnal, using ytmusic album instead of track-by-track matching
