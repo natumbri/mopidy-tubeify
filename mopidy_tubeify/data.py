@@ -33,3 +33,13 @@ def find_in_obj(obj, condition, kind):
                 yield result
             if condition == key and obj[key] == kind:
                 yield obj
+
+
+def flatten(items):
+    """Yield items from any nested list; see Reference."""
+    for x in items:
+        if isinstance(x, list) and not isinstance(x, (str, bytes)):
+            for sub_x in flatten(x):
+                yield sub_x
+        else:
+            yield x

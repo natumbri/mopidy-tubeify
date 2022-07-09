@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup as bs
 from mopidy_youtube.data import extract_video_id as extract_yt_video_id
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
@@ -57,7 +58,7 @@ class TripleR(ServiceClient):
         # does tripler uses a captcha? be careful before going multi-threaded
         [results.append(job(playlist)) for playlist in playlists]
 
-        return list(self.flatten(results))
+        return list(flatten(results))
 
     def get_playlist_tracks(self, playlist):
 

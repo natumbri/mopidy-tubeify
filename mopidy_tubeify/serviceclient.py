@@ -4,15 +4,6 @@ from mopidy_tubeify import logger
 
 
 class ServiceClient(Client):
-    def flatten(self, items):
-        """Yield items from any nested list; see Reference."""
-        for x in items:
-            if isinstance(x, list) and not isinstance(x, (str, bytes)):
-                for sub_x in self.flatten(x):
-                    yield sub_x
-            else:
-                yield x
-
     def get_users_details(self, users):
         logger.warn(f"no details, get_users_details: {users}")
         return []

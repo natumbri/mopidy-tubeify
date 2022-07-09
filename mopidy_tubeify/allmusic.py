@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup as bs
 from mopidy_youtube.timeformat import ISO8601_to_seconds
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import (
     search_and_get_best_album,
@@ -51,7 +52,7 @@ class AllMusic(ServiceClient):
         # does allmusic uses a captcha? be careful before going multi-threaded
         [results.append(job(playlist)) for playlist in playlists]
 
-        return list(self.flatten(results))
+        return list(flatten(results))
 
     def get_playlist_tracks(self, playlist):
 

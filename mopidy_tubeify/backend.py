@@ -10,6 +10,7 @@ from ytmusicapi import YTMusic
 
 from mopidy_tubeify import Extension, logger
 from mopidy_tubeify.allmusic import AllMusic
+from mopidy_tubeify.amrap import Amrap
 from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.pitchfork import Pitchfork
@@ -90,7 +91,18 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library.tripler = TripleR(proxy, headers)
         self.library.tripler.ytmusic = self.ytmusic
         self.services.append(
-            {"service_uri": "tripler", "service_name": "TripleR"}
+            {"service_uri": "tripler", "service_name": "3RRR 102.7FM"}
+        )
+
+        # Amrap() is a generic client for AMRAP Radio Stations
+        # see https://radiopages.info/ for a list of them
+        self.library.pbsfm = Amrap(proxy, headers, stationId="3pbs")
+        self.library.pbsfm.ytmusic = self.ytmusic
+        self.services.append(
+            {
+                "service_uri": "pbsfm",
+                "service_name": "3PBS 106.7FM",
+            }
         )
 
 
@@ -288,16 +300,17 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     listoflists=[listoflists_match["listoflists"]],
                 )
 
-            trackrefs = []
             tracks = service_method.get_playlist_tracks(playlist_uri)
-            good_tracks = [
-                track
-                for track in tracks
-                if "videoId" in track
-                and track["videoId"]
-                and "title" in track
-                and track["title"]
-            ]
+            good_tracks = []
+            if tracks:
+                good_tracks = [
+                    track
+                    for track in tracks
+                    if "videoId" in track
+                    and track["videoId"]
+                    and "title" in track
+                    and track["title"]
+                ]
             if good_tracks:
                 trackrefs = [
                     Ref.track(
