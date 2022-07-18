@@ -7,9 +7,65 @@ from mopidy_tubeify import logger
 from mopidy_tubeify.data import find_in_obj
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
+from urllib.parse import unquote
 
 
 class Apple(ServiceClient):
+    def get_applemusic_headers(self, endpoint=r"https://music.apple.com"):
+        # Getting the access token first to send it with the header to the api endpoint
+        page = self.session.get(endpoint)
+        soup = bs(page.text, "html.parser")
+        logger.debug(f"get_applemusic_headers base url: {endpoint}")
+
+        access_token_tag = soup.find(
+            "meta", {"name": "desktop-music-app/config/environment"}
+        )
+        json_obj = json.loads(unquote(access_token_tag["content"]))
+        access_token_text = json_obj["MEDIA_API"]["token"]
+        self.session.headers.update(
+            {
+                "authorization": f"Bearer {access_token_text}",
+                "referer": endpoint,
+                "accept": "application/json",
+                "app-platform": "WebPlayer",
+                "origin": endpoint,
+            }
+        )
+
+    def get_users_details(self, users):
+        def job(user):
+            endpoint = f"https://music.apple.com/us/curator/{user}"  # npr-music/1437679561
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+            user_dict = {"id": user, "name": soup.find("title").text}
+            return user_dict
+
+        results = []
+
+        [results.append(job(user)) for user in users]
+        return results
+
+    def get_user_playlists(self, user):
+        self.get_applemusic_headers()
+        userId_re = re.compile(r".+/(?P<userId>\d{10})$")
+        userId = userId_re.match(user)["userId"]
+        endpoint = f"https://amp-api.music.apple.com/v1/catalog/us/curators/{userId}/playlists?offset=0"
+
+        playlists = []
+
+        while True:
+            data = self.session.get(endpoint).json()
+            playlists.extend(data["data"])
+            if "next" in data:
+                endpoint = f"https://amp-api.music.apple.com/{data['next']}"
+            else:
+                break
+
+        return [
+            {"name": playlist["attributes"]["name"], "id": playlist["id"]}
+            for playlist in playlists
+        ]
+
     def get_playlists_details(self, playlists):
         def job(playlist):
             endpoint = f"https://music.apple.com/us/playlist/{playlist}"

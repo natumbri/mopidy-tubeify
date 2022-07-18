@@ -37,24 +37,42 @@ class Pitchfork(ServiceClient):
                 for item in item_list:
 
                     if not item["artists"]:
-                        # fix this
-                        item["artists"].append(
-                            {"display_name": item["release_year"]}
-                        )
+
+                        # is there something better than 'unknown'?
+                        # if re.search('Various Artists', item['photos']['tout']['title']):
+                        #     item["artists"].append(
+                        #         {"display_name": "Various Artists"}
+                        #     )
+                        # else:
+
                         logger.warn(
                             f"expect wrong album: no artists listed for {item}"
                         )
 
-                    album = f"{item['artists'][0]['display_name']}, '{item['display_name']}'"
+                        item["artists"].append(
+                            {
+                                "display_name": "Unknown"
+                            }  # str(item["release_year"])}
+                        )
+                        album = f"'{item['display_name']}'"
+                    else:
+                        album = f"{item['artists'][0]['display_name']}, '{item['display_name']}'"
 
-                    playlist_results.append(
-                        {
-                            "name": album,
-                            "id": search_and_get_best_album(
-                                album, self.ytmusic
-                            )[0]["browseId"],
-                        }
+                    artists_albumtitle = (
+                        [artist["display_name"] for artist in item["artists"]],
+                        item["display_name"],
                     )
+
+                    best_album_result = search_and_get_best_album(
+                        artists_albumtitle, self.ytmusic
+                    )
+                    if best_album_result:
+                        playlist_results.append(
+                            {
+                                "name": album,
+                                "id": best_album_result[0]["browseId"],
+                            }
+                        )
                 return playlist_results
             else:
                 # for other sorts of pitchfork playlists

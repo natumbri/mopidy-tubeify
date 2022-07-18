@@ -78,12 +78,14 @@ class AllMusic(ServiceClient):
 
         title = f"{json_data['name']}"
 
-        artists_title = f"{artists}, {title}"
+        # artists_title = f"{artists}, {title}"
+
+        artists_albumtitle = (artists, title)
 
         try:
-            # experimetnal, using ytmusic album instead of track-by-track matching
+            # experimetanl, using ytmusic album instead of track-by-track matching
             album_browseId = search_and_get_best_album(
-                artists_title, self.ytmusic
+                artists_albumtitle, self.ytmusic
             )[0]["browseId"]
             album = self.ytmusic.get_album(album_browseId)
             tracks = album["tracks"]
@@ -113,7 +115,7 @@ class AllMusic(ServiceClient):
         except Exception as e:
 
             logger.warn(
-                f"error {e} getting album {artists_title} "
+                f"error {e} getting album {artists_albumtitle} "
                 f"from ytmusic; trying individual tracks"
             )
 

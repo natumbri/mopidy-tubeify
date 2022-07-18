@@ -9,14 +9,7 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 class Tidal(ServiceClient):
     def _get_tidal_soup(self, url):
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 6.1) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/80.0.3987.149 Safari/537.36"
-            )
-        }
-        page = self.session.get(url, headers=headers, timeout=15)
+        page = self.session.get(url)
         fixed_page = page.text.replace(" */", " */ \n")
         soup = bs(fixed_page, "html5lib")
         return soup

@@ -21,6 +21,7 @@ class Extension(ext.Extension):
     def get_config_schema(self):
         schema = super().get_config_schema()
         schema["applemusic_playlists"] = config.List()
+        schema["applemusic_users"] = config.List()
         schema["spotify_users"] = config.List()
         schema["spotify_playlists"] = config.List()
         schema["tidal_playlists"] = config.List()

@@ -2,7 +2,6 @@ import json
 import re
 
 import pykka
-import requests
 from cachetools import TTLCache, cached
 from mopidy import backend, httpclient
 from mopidy.models import Ref
@@ -25,6 +24,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.config = config
         self.library = TubeifyLibraryProvider(backend=self)
         self.applemusic_playlists = config["tubeify"]["applemusic_playlists"]
+        self.applemusic_users = config["tubeify"]["applemusic_users"]
         self.spotify_users = config["tubeify"]["spotify_users"]
         self.spotify_playlists = config["tubeify"]["spotify_playlists"]
         self.tidal_playlists = config["tubeify"]["tidal_playlists"]
@@ -43,15 +43,6 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             )
         }
 
-        # ytmheaders = {
-        #     "Accept": "*/*",
-        #     "Content-Type": "application/json",
-        #     "origin": "https://music.youtube.com",
-        # }
-        # ytmheaders.update(headers)
-
-        # self.ytmusic = YTMusic(requests_session=ServiceClient(proxy,ytmheaders).session)
-
         self.ytmusic = YTMusic()
 
         self.services = []
@@ -68,9 +59,18 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
                 {"service_uri": "spotify", "service_name": "Spotify"}
             )
         if self.tidal_playlists:
-            self.library.tidal = Tidal(proxy, headers)
-            # why doesn't tidal work with a custom session?
-            self.library.tidal.session = requests.Session()
+            # Tidal seems to be fussy about the User-Agent, and requires "Accept"
+            self.library.tidal = Tidal(
+                proxy,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 6.1) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/80.0.3987.149 Safari/537.36"
+                    ),
+                    "Accept": "*/*",
+                },
+            )
             self.library.tidal.ytmusic = self.ytmusic
             self.services.append(
                 {"service_uri": "tidal", "service_name": "Tidal"}

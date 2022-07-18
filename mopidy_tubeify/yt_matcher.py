@@ -2,6 +2,7 @@
 # https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/yt_provider.py
 # https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/provider_utils.py
 
+import re
 from concurrent.futures.thread import ThreadPoolExecutor
 
 # ! Just for static typing
@@ -29,12 +30,60 @@ def search_and_get_best_match(tracks, ytmusic):
     return results
 
 
-def search_and_get_best_album(album, ytmusic):
+def search_and_get_best_album(artists_albumtitle, ytmusic):
     # this is extremely hacky - just searches for "album" in "albums"
     # and returns a list with one result. no sorting, no checking, etc
+    def check_album(album, album_info_results):
+        lower_album_name = album[1].lower()
+        album_name_words = lower_album_name.replace("-", " ").split(" ")
 
-    album_info_results = ytmusic.search(album, filter="albums", limit=1)
-    return album_info_results
+        lower_album_artists = [artist.lower().strip() for artist in album[0]]
+
+        for album_result in album_info_results:
+            lower_result_name = album_result["title"].lower()
+            lower_result_artists = [
+                artist["name"].lower() for artist in album_result["artists"]
+            ]
+
+            # ! check for common album name word
+            for album_name_word in album_name_words:
+                if (
+                    album_name_word not in ["", "a", "the", "of", "and"]
+                    and album_name_word in lower_result_name
+                ):
+
+                    if lower_album_artists[0] in ["unknown", "various artists"]:
+                        return [album_result]
+
+                    for lower_album_artist in lower_album_artists:
+                        for lower_result_artist in lower_result_artists:
+                            if _match_percentage(
+                                lower_album_artist,
+                                lower_result_artist,
+                                85,
+                            ):
+                                return [album_result]
+
+        logger.warn(f"No match for {artists_albumtitle}")
+
+        # sometimes taking bracketed text out of title helps
+        bracked_re = re.compile(r"[\(\[].*?[\)\]]")
+        if bracked_re.search(artists_albumtitle[1]):
+            return search_and_get_best_album(
+                (
+                    artists_albumtitle[0],
+                    bracked_re.sub("", artists_albumtitle[1]),
+                ),
+                ytmusic,
+            )
+        return []
+
+    album_info_results = ytmusic.search(
+        f"{artists_albumtitle[0][0]} {artists_albumtitle[1]}",
+        filter="albums",
+        limit=10,
+    )
+    return check_album(artists_albumtitle, album_info_results)
 
 
 def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
