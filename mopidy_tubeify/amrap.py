@@ -11,6 +11,10 @@ from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
+def format_episode_date(date_str):
+    return time.strftime("%-d %b %Y", time.strptime(date_str, "%Y-%m-%d"))
+
+
 class Amrap(ServiceClient):
     def __init__(self, proxy, headers, stationId):
         super().__init__(proxy, headers)
@@ -77,7 +81,6 @@ class Amrap(ServiceClient):
 
     def get_playlists_details(self, playlists):
         def job(playlist):
-
             # deal with program pages
             match_PROGRAM = re.match(
                 r"^PROGRAM-(?P<playlist>(?P<stationId>[^\.]+)\.radiopages\.info\/(?P<programId>.+)$)",
@@ -85,15 +88,13 @@ class Amrap(ServiceClient):
             )
             if match_PROGRAM:
                 logger.debug(f'matched "program" {playlist}')
-                programId = match_PROGRAM["programId"]
-                stationId = match_PROGRAM["stationId"]
                 program_details = self.get_amrap_headers(
-                    stationId=stationId, programId=programId
+                    stationId=match_PROGRAM["stationId"],
+                    programId=match_PROGRAM["programId"],
                 )
                 self.session.headers.update(
                     {"X-CSRF-Token": program_details["csrfToken"]}
                 )
-
                 endpoint = "https://airnet.org.au/program/ajax-server/getEpisodeArchive.php"
 
                 episode_archive_page = self.session.get(
@@ -104,7 +105,6 @@ class Amrap(ServiceClient):
                 )
 
                 archive_json = json.loads(episode_archive_soup.text)
-                playlist_results = []
 
                 episode_date_re = re.compile(
                     r"^.+/(?P<date>(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2}))-?.*$"
@@ -115,6 +115,7 @@ class Amrap(ServiceClient):
                     reverse=True,
                 )
 
+                playlist_results = []
                 for year in years:
                     program_details.update({"year": year})
                     episode_archive_page = self.session.get(
@@ -130,7 +131,10 @@ class Amrap(ServiceClient):
                     [
                         playlist_results.append(
                             {
-                                "name": f'{program_details["programName"]}, {time.strftime("%-d %b %Y", time.strptime(episode_date_re.search(episode["url"])["date"], "%Y-%m-%d"))}',
+                                "name": (
+                                    f'{program_details["programName"]}, '
+                                    f'{format_episode_date(episode_date_re.search(episode["url"])["date"])}'
+                                ),
                                 "id": f'{match_PROGRAM["playlist"]};{episode["id"]}',
                                 "date": time.strptime(
                                     episode_date_re.search(episode["url"])[
@@ -148,13 +152,11 @@ class Amrap(ServiceClient):
                     playlist_results, key=itemgetter("date"), reverse=True
                 )
             else:
-                # for other sorts of tripler playlists
+                # for other sorts of amrap playlists
                 return
 
-        results = []
-
-        # does tripler uses a captcha? be careful before going multi-threaded
-        [results.append(job(playlist)) for playlist in playlists]
+        # does amrap uses a captcha? be careful before going multi-threaded
+        results = [job(playlist) for playlist in playlists]
 
         return list(flatten(results))
 
@@ -164,14 +166,12 @@ class Amrap(ServiceClient):
             r"^(?P<station>[^\.]+)\.radiopages\.info\/(?P<program>.+)\;(?P<episode>.+)$",
             playlist,
         )
-        programId = match_EPISODE["program"]
-        stationId = match_EPISODE["station"]
-        episode = match_EPISODE["episode"]
 
         program_details = self.get_amrap_headers(
-            stationId=stationId, programId=programId
+            stationId=match_EPISODE["station"],
+            programId=match_EPISODE["program"],
         )
-        program_details.update({"episode": episode})
+        program_details.update({"episode": match_EPISODE["episode"]})
         self.session.headers.update(
             {"X-CSRF-Token": program_details["csrfToken"]}
         )
@@ -182,7 +182,6 @@ class Amrap(ServiceClient):
             episode_response.content.decode("unicode-escape"), "lxml"
         )
         track_table = episode_response_soup.find("table")
-
         track_class = re.compile(".*playlist-mainText.*")
         tracks = track_table.find_all("td", class_=track_class)
         track_list = [track.get_text(strip=True) for track in tracks]
@@ -211,8 +210,8 @@ class Amrap(ServiceClient):
             if len(this_track) >= 2:
                 track_dicts.append(
                     {
-                        "song_artists": [this_track[0]],
                         "song_name": this_track[1],
+                        "song_artists": [this_track[0]],
                         "song_duration": 0,
                         "isrc": None,
                     }
@@ -238,20 +237,11 @@ class Amrap(ServiceClient):
         programs_details_table = programs_details_soup.find(
             "div", attrs={"id": "programList"}
         ).table.tbody
-        programs_details_list = [
-            program for program in programs_details_table.find_all("a")
+
+        return [
+            {
+                "name": f"{program.text}",
+                "id": f"listoflists-PROGRAM-{program['href'][8:]}",
+            }
+            for program in programs_details_table.find_all("a")
         ]
-
-        track_dicts = []
-
-        [
-            track_dicts.append(
-                {
-                    "name": f"{program.text}",
-                    "id": f"listoflists-PROGRAM-{program['href'][8:]}",
-                }
-            )
-            for program in programs_details_list
-        ]
-
-        return track_dicts

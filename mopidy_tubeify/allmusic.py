@@ -1,5 +1,6 @@
 import json
 import re
+from html import unescape
 
 from bs4 import BeautifulSoup as bs
 from mopidy_youtube.timeformat import ISO8601_to_seconds
@@ -18,31 +19,27 @@ class AllMusic(ServiceClient):
         def job(playlist):
 
             # for featured new releases
-            match_FNR = re.match(r"^FNR\-(?P<albumId>.+)$", playlist)
+            match_FNR = re.match(r"^FNR\-(?P<FNRdate>.+)$", playlist)
             if match_FNR:
                 logger.debug(f'matched "featured new release" {playlist}')
-                playlist = match_FNR["albumId"]
+                playlist = match_FNR["FNRdate"]
                 endpoint = f"https://www.allmusic.com/newreleases/{playlist}"
                 data = self.session.get(endpoint)
                 soup = bs(data.text, "html5lib")
                 albumId_re = re.compile(r"^.+/album/(?P<albumId>.+)$")
                 new_releases_filter = soup.find_all("div", class_="new-release")
-                playlist_results = []
-                for new_release in new_releases_filter:
-                    playlist_results.append(
-                        {
-                            "name": (
-                                f"{new_release.find('div', class_='artist').text.strip()}, "
-                                f"\"{new_release.find('div', class_='title').text.strip()}\""
-                            ),
-                            "id": albumId_re.match(
-                                new_release.find("div", class_="title").a[
-                                    "href"
-                                ]
-                            )["albumId"],
-                        }
-                    )
-                return playlist_results
+                return [
+                    {
+                        "name": (
+                            f"{new_release.find('div', class_='artist').text.strip()}, "
+                            f"\"{new_release.find('div', class_='title').text.strip()}\""
+                        ),
+                        "id": albumId_re.match(
+                            new_release.find("div", class_="title").a["href"]
+                        )["albumId"],
+                    }
+                    for new_release in new_releases_filter
+                ]
             else:
                 # for other sorts of allmusic playlists
                 pass
@@ -63,30 +60,30 @@ class AllMusic(ServiceClient):
         endpoint = f"https://www.allmusic.com/album/{playlist}"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
-        tracks = []
         json_script = soup.find("script", {"type": "application/ld+json"})
         json_data = json.loads(json_script.text)
 
         if "byArtist" in json_data:
-            artists = [artist["name"] for artist in json_data["byArtist"]]
+            artists = [
+                unescape(artist["name"]) for artist in json_data["byArtist"]
+            ]
         elif "releaseOf" in json_data and "byArtist" in json_data["releaseOf"]:
             artists = [
-                artist["name"] for artist in json_data["releaseOf"]["byArtist"]
+                unescape(artist["name"])
+                for artist in json_data["releaseOf"]["byArtist"]
             ]
         else:
             artists = ["Unknown"]
 
-        title = f"{json_data['name']}"
-
-        # artists_title = f"{artists}, {title}"
-
+        title = f"{unescape(json_data['name'])}"
         artists_albumtitle = (artists, title)
 
         try:
-            # experimetanl, using ytmusic album instead of track-by-track matching
-            album_browseId = search_and_get_best_album(
+            # experimental, using ytmusic album instead of track-by-track matching
+            album_browseId_list = search_and_get_best_album(
                 artists_albumtitle, self.ytmusic
-            )[0]["browseId"]
+            )
+            album_browseId = album_browseId_list[0]["browseId"]
             album = self.ytmusic.get_album(album_browseId)
             tracks = album["tracks"]
 
@@ -109,7 +106,6 @@ class AllMusic(ServiceClient):
                 )
                 for track in tracks
             ]
-
             return tracks
 
         except Exception as e:
@@ -128,21 +124,19 @@ class AllMusic(ServiceClient):
                     )["albumId"]
                 )
 
-            for track in json_data["tracks"]:
-
-                # convert ISO8601 (PT1H2M10S) to s (3730)
-                val = ISO8601_to_seconds(track.get("duration", "0S"))
-
-                track_dict = {
-                    "song_name": track["name"],
-                    "song_artists": [
-                        artist["name"] for artist in json_data["byArtist"]
-                    ],
-                    "song_duration": val,
-                    "isrc": None,
-                }
-
-                tracks.append(track_dict)
+                tracks = [
+                    {
+                        "song_name": track["name"],
+                        "song_artists": [
+                            artist["name"] for artist in json_data["byArtist"]
+                        ],
+                        "song_duration": ISO8601_to_seconds(
+                            track.get("duration", "0S")
+                        ),
+                        "isrc": None,
+                    }
+                    for track in json_data["tracks"]
+                ]
 
             return search_and_get_best_match(tracks, self.ytmusic)
 
@@ -155,14 +149,10 @@ class AllMusic(ServiceClient):
         week_filter = soup.find("select", {"name": "week-filter"})
         weeks = week_filter.find_all("option")
 
-        track_dicts = []
-
-        for week in weeks:
-            track_dicts.append(
-                {
-                    "name": f"Featured New Releases, {week.text.strip()}",
-                    "id": f"listoflists-FNR-{week['value']}",
-                }
-            )
-
-        return track_dicts
+        return [
+            {
+                "name": f"Featured New Releases, {week.text.strip()}",
+                "id": f"listoflists-FNR-{week['value']}",
+            }
+            for week in weeks
+        ]

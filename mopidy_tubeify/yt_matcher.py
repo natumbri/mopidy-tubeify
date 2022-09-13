@@ -13,6 +13,8 @@ from unidecode import unidecode
 
 from mopidy_tubeify import logger
 
+bracked_re = re.compile(r"[\(\[].*?[\)\]]")
+
 
 def search_and_get_best_match(tracks, ytmusic):
     def search_and_get_best_match_wrapper(track):
@@ -67,7 +69,7 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
         logger.warn(f"No match for {artists_albumtitle}")
 
         # sometimes taking bracketed text out of title helps
-        bracked_re = re.compile(r"[\(\[].*?[\)\]]")
+
         if bracked_re.search(artists_albumtitle[1]):
             return search_and_get_best_album(
                 (
@@ -83,6 +85,9 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
         filter="albums",
         limit=10,
     )
+    album_info_results[:] = [
+        album for album in album_info_results if album["type"] == "Album"
+    ]
     return check_album(artists_albumtitle, album_info_results)
 
 
@@ -212,7 +217,24 @@ def _do_search_and_match(
 
     # No matches found
     if len(ordered_song_info_results) == 0:
-        return None
+        # bracked_re = re.compile(r"[\(\[].*?[\)\]]")
+        if bracked_re.search(song_name) or any(
+            [bracked_re.search(artist) for artist in song_artists]
+        ):
+            return _do_search_and_match(
+                song_name=bracked_re.sub("", song_name),
+                song_artists=[
+                    bracked_re.sub("", artist) for artist in song_artists
+                ],
+                isrc=None,
+                ytmusic=ytmusic,
+                song_duration=song_duration,
+                videoId=None,
+            )
+
+        else:
+            logger.warn(f"no match for {song_name}, {song_artists}")
+            return None
 
     # result_items = list(results.items())
 

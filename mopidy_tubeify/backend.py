@@ -12,6 +12,7 @@ from mopidy_tubeify.allmusic import AllMusic
 from mopidy_tubeify.amrap import Amrap
 from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
+from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
@@ -80,6 +81,12 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library.allmusic.ytmusic = self.ytmusic
         self.services.append(
             {"service_uri": "allmusic", "service_name": "AllMusic"}
+        )
+
+        self.library.kcrw = KCRW(proxy, headers)
+        self.library.kcrw.ytmusic = self.ytmusic
+        self.services.append(
+            {"service_uri": "kcrw", "service_name": "KCRW 89.9FM"}
         )
 
         self.library.pitchfork = Pitchfork(proxy, headers)
