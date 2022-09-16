@@ -78,17 +78,7 @@ class KCRW(ServiceClient):
             attrs={"class": "tracklist_container", "id": "playlist-entries"},
         )["data-tracklist-url"]
         json_data = self.session.get(episode_playlist_url).json()
-        # track_dict = {}
-        # for index, track in enumerate(json_data):
 
-        #     track_dict[index] = {
-        #         "song_name": track["title"],
-        #         "song_artists": [track["artist"]],
-        #         "song_duration": 0,
-        #         "isrc": None
-        #     }
-
-        # tracks = list(track_dict.values())
         tracks = [
             {
                 "song_name": track["title"],
@@ -96,7 +86,7 @@ class KCRW(ServiceClient):
                 "song_duration": 0,
                 "isrc": None,
             }
-            for index, track in enumerate(json_data)
+            for track in json_data
             if track["title"]
         ]
         logger.debug(f"total tracks for {playlist}: {len(tracks)}")

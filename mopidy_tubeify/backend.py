@@ -13,6 +13,7 @@ from mopidy_tubeify.amrap import Amrap
 from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.kcrw import KCRW
+from mopidy_tubeify.kexp import KEXP
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
@@ -87,6 +88,12 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library.kcrw.ytmusic = self.ytmusic
         self.services.append(
             {"service_uri": "kcrw", "service_name": "KCRW 89.9FM"}
+        )
+
+        self.library.kexp = KEXP(proxy, headers)
+        self.library.kexp.ytmusic = self.ytmusic
+        self.services.append(
+            {"service_uri": "kexp", "service_name": "KEXP 90.3FM"}
         )
 
         self.library.pitchfork = Pitchfork(proxy, headers)
@@ -309,6 +316,9 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
             tracks = service_method.get_playlist_tracks(playlist_uri)
             good_tracks = []
+            good_albums = []
+            trackrefs = []
+
             if tracks:
                 good_tracks = [
                     track
@@ -318,15 +328,28 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     and "title" in track
                     and track["title"]
                 ]
-            if good_tracks:
-                trackrefs = [
-                    Ref.track(
-                        uri=f"yt:video:{track['videoId']}",
-                        name=track["title"],
-                    )
-                    for track in good_tracks
-                    # if "videoId" in track and track["videoId"]
+
+                good_albums = [
+                    album
+                    for album in tracks
+                    if "type" in album
+                    and album["type"] == "Album"
+                    and album["browseId"]
+                    and "title" in album
+                    and album["title"]
                 ]
+
+            if good_tracks:
+                trackrefs.extend(
+                    [
+                        Ref.track(
+                            uri=f"yt:video:{track['videoId']}",
+                            name=track["title"],
+                        )
+                        for track in good_tracks
+                        # if "videoId" in track and track["videoId"]
+                    ]
+                )
 
                 # include ytmusic data for all tracks as preload data in the uri
                 # for the first track.  There is surely a better way to do this.
@@ -345,7 +368,19 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     ),
                     name=first_track["title"],
                 )
-                return trackrefs
+
+            if good_albums:
+                trackrefs.extend(
+                    [
+                        Ref.album(
+                            uri=f"yt:playlist:{album['browseId']}",
+                            name=album["title"],
+                        )
+                        for album in good_albums
+                    ]
+                )
+
+            return trackrefs
 
         else:
             logger.warn(f"There was a problem with uri {uri}")
