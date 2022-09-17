@@ -85,6 +85,16 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
         filter="albums",
         limit=10,
     )
+
+    # chuck in a couple of title only, might help.
+    album_info_results.extend(
+        ytmusic.search(
+            f"{artists_albumtitle[1]}",
+            filter="albums",
+            limit=2,
+        )
+    )
+
     album_info_results[:] = [
         album for album in album_info_results if album["type"] == "Album"
     ]
