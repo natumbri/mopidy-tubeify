@@ -32,14 +32,11 @@ class NME(ServiceClient):
             json.loads(playlist)["album"],
         )
 
-        print(artists_albumtitle)
-
         try:
             # experimental, using ytmusic album instead of track-by-track matching
             album_browseId_list = search_and_get_best_album(
                 artists_albumtitle=artists_albumtitle, ytmusic=self.ytmusic
             )
-            print(f"a bId: {album_browseId_list}")
             album_browseId = album_browseId_list[0]["browseId"]
             album = self.ytmusic.get_album(album_browseId)
             tracks = album["tracks"]
