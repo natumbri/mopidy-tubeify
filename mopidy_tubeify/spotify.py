@@ -76,12 +76,14 @@ class Spotify(ServiceClient):
         def job(playlist):
             endpoint = f"https://api.spotify.com/v1/playlists/{playlist}"
             data = self.session.get(endpoint).json()
-            playlist_name = data["name"]
-            return {"name": playlist_name, "id": playlist}
+            if "name" in data:
+                playlist_name = data["name"]
+                return {"name": playlist_name, "id": playlist}
+            logger.error(f"{playlist}: {data}")
 
         results = []
         [results.append(job(playlist)) for playlist in playlists]
-        return results
+        return [result for result in results if result]
 
     def get_playlist_tracks(self, playlist):
         endpoint = f"https://api.spotify.com/v1/playlists/{playlist}"

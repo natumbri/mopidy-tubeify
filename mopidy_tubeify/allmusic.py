@@ -110,13 +110,10 @@ class AllMusic(ServiceClient):
 
         except Exception as e:
 
-            logger.warn(
-                f"error {e} getting album {artists_albumtitle} "
-                f"from ytmusic; trying individual tracks"
-            )
-
-            # if the album is a re-release, get_playlist_tracks from the original
             if re.match(r"^.+/release/.+$", json_data["url"]):
+                logger.warning(
+                    f"album {album['title']} is a re-release; getting playlist_tracks from the original"
+                )
                 return self.get_playlist_tracks(
                     re.match(
                         r"^.+/album/(?P<albumId>.+)$",
@@ -124,19 +121,24 @@ class AllMusic(ServiceClient):
                     )["albumId"]
                 )
 
-                tracks = [
-                    {
-                        "song_name": track["name"],
-                        "song_artists": [
-                            artist["name"] for artist in json_data["byArtist"]
-                        ],
-                        "song_duration": ISO8601_to_seconds(
-                            track.get("duration", "0S")
-                        ),
-                        "isrc": None,
-                    }
-                    for track in json_data["tracks"]
-                ]
+            logger.warn(
+                f"error {e} getting album {artists_albumtitle} "
+                f"from ytmusic; trying individual tracks"
+            )
+
+            tracks = [
+                {
+                    "song_name": track["name"],
+                    "song_artists": [
+                        artist["name"] for artist in json_data["byArtist"]
+                    ],
+                    "song_duration": ISO8601_to_seconds(
+                        track.get("duration", "0S")
+                    ),
+                    "isrc": None,
+                }
+                for track in json_data["tracks"]
+            ]
 
             return search_and_get_best_match(tracks, self.ytmusic)
 

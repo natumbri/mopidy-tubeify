@@ -14,6 +14,7 @@ from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
+from mopidy_tubeify.nme import NME
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
@@ -94,6 +95,12 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library.kexp.ytmusic = self.ytmusic
         self.services.append(
             {"service_uri": "kexp", "service_name": "KEXP 90.3FM"}
+        )
+
+        self.library.nme = NME(proxy, headers)
+        self.library.nme.ytmusic = self.ytmusic
+        self.services.append(
+            {"service_uri": "nme", "service_name": "NME Reviewed Albums"}
         )
 
         self.library.pitchfork = Pitchfork(proxy, headers)

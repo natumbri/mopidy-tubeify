@@ -13,7 +13,7 @@ from unidecode import unidecode
 
 from mopidy_tubeify import logger
 
-bracked_re = re.compile(r"[\(\[].*?[\)\]]")
+bracked_re = re.compile(r"[\(\[](?P<bracketed>.*?)[\)\]]")
 
 
 def search_and_get_best_match(tracks, ytmusic):
@@ -35,6 +35,14 @@ def search_and_get_best_match(tracks, ytmusic):
 def search_and_get_best_album(artists_albumtitle, ytmusic):
     # this is extremely hacky - just searches for "album" in "albums"
     # and returns a list with one result. no sorting, no checking, etc
+
+    def get_albums(query, types):
+        return [
+            album
+            for album in ytmusic.search(query, filter="albums", limit=10)
+            if album["type"] in types
+        ]
+
     def check_album(album, album_info_results):
         lower_album_name = album[1].lower()
         album_name_words = lower_album_name.replace("-", " ").split(" ")
@@ -66,39 +74,68 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
                             ):
                                 return [album_result]
 
-        logger.warn(f"No match for {artists_albumtitle}")
+        logger.warn(f"No match for {album}")  # " ({album_info_results})")
 
-        # sometimes taking bracketed text out of title helps
+        return []
 
-        if bracked_re.search(artists_albumtitle[1]):
-            return search_and_get_best_album(
+    result = None
+
+    if artists_albumtitle[1] == "(self titled)":
+        artists_albumtitle == (artists_albumtitle[0], artists_albumtitle[0][0])
+
+    types = ["Album"]
+
+    # EPs are hard.
+    if re.match(r"^.+EP$", artists_albumtitle[1]):
+        types.append("EP")
+        # for some reason having "EP" at the end of a search string wrecks
+        # search results for EPs?!
+        artists_albumtitle = (
+            artists_albumtitle[0],
+            re.sub(r"\ EP$", "", artists_albumtitle[1]),
+        )
+
+    album_info_results = get_albums(
+        f"{artists_albumtitle[0][0]} {artists_albumtitle[1]}", types
+    )
+
+    result = check_album(artists_albumtitle, album_info_results)
+
+    if not result:
+        # chuck in a couple of title only, might help.
+        album_info_results = get_albums(f"{artists_albumtitle[1]}", types)
+        result = check_album(artists_albumtitle, album_info_results)
+
+    if bracked_re.search(artists_albumtitle[1]):
+        if not result:
+            # try without stuff in brackets
+            album_info_results = get_albums(
+                f"{artists_albumtitle[0][0]} {bracked_re.sub('', artists_albumtitle[1])}",
+                types,
+            )
+            result = check_album(
                 (
                     artists_albumtitle[0],
                     bracked_re.sub("", artists_albumtitle[1]),
                 ),
-                ytmusic,
+                album_info_results,
             )
-        return []
 
-    album_info_results = ytmusic.search(
-        f"{artists_albumtitle[0][0]} {artists_albumtitle[1]}",
-        filter="albums",
-        limit=10,
-    )
+        if not result:
+            # try with only stuff in brackets
+            album_info_results = get_albums(
+                f"{artists_albumtitle[0][0]} {bracked_re.search(artists_albumtitle[1])['bracketed']}",
+                types,
+            )
+            result = check_album(
+                (
+                    artists_albumtitle[0],
+                    bracked_re.search(artists_albumtitle[1])["bracketed"],
+                ),
+                album_info_results,
+            )
 
-    # chuck in a couple of title only, might help.
-    album_info_results.extend(
-        ytmusic.search(
-            f"{artists_albumtitle[1]}",
-            filter="albums",
-            limit=2,
-        )
-    )
-
-    album_info_results[:] = [
-        album for album in album_info_results if album["type"] == "Album"
-    ]
-    return check_album(artists_albumtitle, album_info_results)
+    return result
 
 
 def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
