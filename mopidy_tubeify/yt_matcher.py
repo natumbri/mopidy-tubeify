@@ -8,12 +8,33 @@ from concurrent.futures.thread import ThreadPoolExecutor
 # ! Just for static typing
 from typing import List, Optional
 
+from cachetools import TTLCache, cached
+# from mopidy_youtube.apis import youtube_japi
+# from mopidy_youtube.timeformat import ISO8601_to_seconds
 from rapidfuzz import fuzz
 from unidecode import unidecode
 
 from mopidy_tubeify import logger
 
 bracked_re = re.compile(r"[\(\[](?P<bracketed>.*?)[\)\]]")
+
+cache_max_len = 4000
+cache_ttl = 21600
+
+yt_matcher_cache = TTLCache(maxsize=cache_max_len, ttl=cache_ttl)
+
+
+# Custom Decorator function
+def listToTuple(function):
+    def wrapper(*args, **kwargs):
+        _args = tuple([tuple(x) if type(x) == list else x for x in args])
+        _kwargs = {
+            k: (tuple(v) if type(v) == list else v) for k, v in kwargs.items()
+        }
+        result = function(*_args, **_kwargs)
+        return result
+
+    return wrapper
 
 
 def search_and_get_best_match(tracks, ytmusic):
@@ -175,6 +196,8 @@ def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
         )
 
 
+@listToTuple
+@cached(cache=yt_matcher_cache)
 def _do_search_and_match(
     song_name: str,
     song_artists: List[str],
@@ -207,7 +230,7 @@ def _do_search_and_match(
             )
 
         if sorted_isrc_results:
-            sorted_isrc_results[0]["result"]
+            return sorted_isrc_results[0]["result"]
         else:
             logger.warn(f"No suitable result for isrc {isrc}")
             logger.warn(
@@ -239,7 +262,7 @@ def _do_search_and_match(
             )
 
         if sorted_videoId_results:
-            sorted_videoId_results[0]["result"]
+            return sorted_videoId_results[0]["result"]
         else:
             logger.warn(f"No suitable result for videoId {videoId}")
             logger.warn(
@@ -253,10 +276,6 @@ def _do_search_and_match(
     # getting rate limited sooner
     song_info_results = ytmusic.search(song_title, filter="songs")
 
-    if song_info_results is None:
-        logger.warn(f"Couldn't find the song on YouTube Music: {song_title}")
-        return None
-
     # Order results
     ordered_song_info_results = _order_yt_results(
         song_info_results, song_name, song_artists, song_duration
@@ -264,7 +283,6 @@ def _do_search_and_match(
 
     # No matches found
     if len(ordered_song_info_results) == 0:
-        # bracked_re = re.compile(r"[\(\[].*?[\)\]]")
         if bracked_re.search(song_name) or any(
             [bracked_re.search(artist) for artist in song_artists]
         ):
@@ -280,21 +298,77 @@ def _do_search_and_match(
             )
 
         else:
-            logger.warn(f"no match for {song_name}, {song_artists}")
-            return None
 
-    # result_items = list(results.items())
+            # is this a good idea?
+            logger.warn(
+                f"Couldn't find the song on YouTube Music: {song_title}, trying videos"
+            )
+            song_info_results = ytmusic.search(song_title, filter="videos")
+
+            # Order results
+            ordered_song_info_results = _order_yt_results(
+                song_info_results, song_name, song_artists, song_duration
+            )
+
+            if song_info_results is None:
+                logger.warn(
+                    f"Gave up looking for {song_title} on YouTube Music; returning None"
+                )
+                return None
+
+            # # try normal youtube
+            # # is this a good idea? Slows things down, and matches
+            # # things that are not songs
+            # results = youtube_japi.jAPI.search(
+            #     song_name.join(song_artists), params=["EgIQAQ%3D%3D"]
+            # )
+
+            # converted_results = [
+            #     {
+            #         "videoId": item["id"]["videoId"],
+            #         "title": item["snippet"]["title"],
+            #         "artists": [
+            #             {
+            #                 "name": song_artist,
+            #                 "id": item["snippet"]["channelId"],
+            #             } for song_artist in song_artists
+            #         ],
+            #         "duration_seconds": ISO8601_to_seconds(
+            #             item["contentDetails"]["duration"]
+            #         ),
+            #         "lengthSeconds": ISO8601_to_seconds(
+            #             item["contentDetails"]["duration"]
+            #         ),
+            #         "thumbnail": {
+            #             "thumbnails": [item["snippet"]["thumbnails"]["default"]]
+            #         },
+            #     }
+            #     for item in results["items"]
+            # ]
+
+            # ordered_song_info_results = _order_yt_results(
+            #     converted_results, song_name, song_artists, song_duration
+            # )
+            # logger.info(f"{song_name}, {song_artists}, ({song_d}) matched using youtube: ")
+            # if len(ordered_song_info_results) > 0:
+            #     logger.info(
+
+            #         f"{sorted(ordered_song_info_results, key=lambda x: x['average_match'],reverse=True)[0]}"
+            #         )
+            # else:
+            #     logger.info("no match")
 
     # Sort results by highest score
-    sorted_song_info_results = sorted(
-        ordered_song_info_results,
-        key=lambda x: x["average_match"],
-        reverse=True,
-    )
+    if ordered_song_info_results:
+        sorted_song_info_results = sorted(
+            ordered_song_info_results,
+            key=lambda x: x["average_match"],
+            reverse=True,
+        )
 
-    # ! In theory, the first 'TUPLE' in sorted_results should have the highest match
-    # ! value, we send back only the videoId
-    return sorted_song_info_results[0]["result"]
+        # ! In theory, the first 'TUPLE' in sorted_results should have the highest match
+        # ! value, we send back only the videoId
+        return sorted_song_info_results[0]["result"]
 
 
 def _order_yt_results(

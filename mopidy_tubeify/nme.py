@@ -9,18 +9,6 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_album
 
 
 class NME(ServiceClient):
-    def get_users_details(self, users):
-        logger.warn(f"no details, get_users_details: {users}")
-        return []
-
-    def get_user_playlists(self, user):
-        logger.warn(f"no playlists, get_user_playlists: {user}")
-        return
-
-    def get_playlists_details(self, playlists):
-        logger.warn(f"no details, get_playlists_details: {playlists}")
-        return []
-
     def get_playlist_tracks(self, playlist):
 
         # deal with featured new releases pages

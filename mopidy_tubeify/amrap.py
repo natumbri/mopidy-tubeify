@@ -71,14 +71,6 @@ class Amrap(ServiceClient):
 
         return program_details
 
-    def get_users_details(self, users):
-        logger.warn(f"no details, get_users_details: {users}")
-        return []
-
-    def get_user_playlists(self, user):
-        logger.warn(f"no playlists, get_user_playlists: {user}")
-        return
-
     def get_playlists_details(self, playlists):
         def job(playlist):
             # deal with program pages
