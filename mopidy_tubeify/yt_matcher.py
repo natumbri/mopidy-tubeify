@@ -9,6 +9,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from typing import List, Optional
 
 from cachetools import TTLCache, cached
+
 # from mopidy_youtube.apis import youtube_japi
 # from mopidy_youtube.timeformat import ISO8601_to_seconds
 from rapidfuzz import fuzz

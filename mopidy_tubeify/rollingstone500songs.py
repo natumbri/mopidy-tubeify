@@ -26,18 +26,21 @@ class RollingStone500Songs(ServiceClient):
             .replace("‘", "'")
             .replace("’", "'")
         )["gallery"]
-        name_artists = re.compile(r"^(?P<artist>.+),\s'(?P<name>.+)'$")
+        name_artists = [
+            re.match(r"^(?P<artist>.+),\s'(?P<name>.+)'$", track["title"])
+            for track in tracks_json
+        ]
         tracks = [
             {
-                "song_name": name_artists.match(track["title"])["name"],
-                "song_artists": name_artists.match(track["title"])[
-                    "artist"
-                ].split(","),
+                "song_name": track["name"],
+                "song_artists": track["artist"].split(","),
                 "song_duration": 0,
                 "isrc": None,
             }
-            for track in tracks_json
+            for track in name_artists
+            if track
         ]
+
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
