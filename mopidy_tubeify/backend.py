@@ -17,7 +17,7 @@ from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
 from mopidy_tubeify.nme import NME
 from mopidy_tubeify.pitchfork import Pitchfork
-from mopidy_tubeify.rollingstone500songs import RollingStone500Songs
+from mopidy_tubeify.rollingstone import RollingStone
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
 from mopidy_tubeify.tripler import TripleR
@@ -117,12 +117,12 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             {"service_uri": "pitchfork", "service_name": "Pitchfork"}
         )
 
-        self.library.rollingstone500songs = RollingStone500Songs(proxy, headers)
-        self.library.rollingstone500songs.ytmusic = self.ytmusic
+        self.library.rollingstone = RollingStone(proxy, headers)
+        self.library.rollingstone.ytmusic = self.ytmusic
         self.services.append(
             {
-                "service_uri": "rollingstone500songs",
-                "service_name": "RollingStone500Songs",
+                "service_uri": "rollingstone",
+                "service_name": "Rolling Stone Magazine",
             }
         )
 

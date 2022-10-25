@@ -54,6 +54,21 @@ def search_and_get_best_match(tracks, ytmusic):
     return results
 
 
+def search_and_get_best_albums(albums, ytmusic):
+    def search_and_get_best_album_wrapper(album):
+        yt_album = search_and_get_best_album(album, ytmusic=ytmusic)
+        if yt_album:
+            return yt_album
+
+    results = []
+
+    with ThreadPoolExecutor() as executor:
+        futures = executor.map(search_and_get_best_album_wrapper, albums)
+        [results.append(value) for value in futures if value is not None]
+
+    return results
+
+
 def search_and_get_best_album(artists_albumtitle, ytmusic):
     # this is extremely hacky - just searches for "album" in "albums"
     # and returns a list with one result. no sorting, no checking, etc
@@ -156,7 +171,6 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
                 ),
                 album_info_results,
             )
-
     return result
 
 
