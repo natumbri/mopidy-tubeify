@@ -6,20 +6,12 @@ from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import (
-    search_and_get_best_album,
+    search_and_get_best_albums,
     search_and_get_best_match,
 )
 
 
 class KEXP(ServiceClient):
-    def get_users_details(self, users):
-        logger.warn(f"no details, get_users_details: {users}")
-        return []
-
-    def get_user_playlists(self, user):
-        logger.warn(f"no playlists, get_user_playlists: {user}")
-        return
-
     def get_playlists_details(self, playlists):
         def job(playlist):
             # deal with DJ pages
@@ -88,11 +80,9 @@ class KEXP(ServiceClient):
                     "song_name": track.find(
                         "a", attrs={"href": re.compile(r"^\/song\/\d+$")}
                     ).text,
-                    "song_artists": [
-                        track.find(
-                            "a", attrs={"href": re.compile(r"^\/artist\/\d+$")}
-                        ).text
-                    ],
+                    "song_artists": track.find(
+                        "a", attrs={"href": re.compile(r"^\/artist\/\d+$")}
+                    ).text.split(" feat. "),
                     "song_duration": 0,
                     "isrc": None,
                 }
@@ -105,11 +95,9 @@ class KEXP(ServiceClient):
 
             albums = [
                 (
-                    [
-                        album.find(
-                            "a", attrs={"href": re.compile(r"^\/artist\/\d+$")}
-                        ).text
-                    ],
+                    album.find(
+                        "a", attrs={"href": re.compile(r"^\/artist\/\d+$")}
+                    ).text.split(" feat. "),
                     album.find("div", class_="info")
                     .find("a", attrs={"href": re.compile(r"^\/album\/\d+$")})
                     .text,
@@ -117,11 +105,10 @@ class KEXP(ServiceClient):
                 for album in stats_playlist_soup
             ]
 
-            albums_to_return = [
-                search_and_get_best_album(album, self.ytmusic)
-                for album in albums
-                if album[1]
-            ]
+            albums_to_return = search_and_get_best_albums(
+                [album for album in albums if album[1]], self.ytmusic
+            )
+
             return list(flatten(albums_to_return))
 
     def get_service_homepage(self):

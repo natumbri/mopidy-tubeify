@@ -10,75 +10,78 @@ from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import (
     search_and_get_best_album,
+    search_and_get_best_albums,
     search_and_get_best_match,
 )
 
 
 class Pitchfork(ServiceClient):
     def get_playlists_details(self, playlists):
+        logger.info(playlists)
+
         def job(playlist):
 
-            # for album review pages
-            match_ARP = re.match(r"^ARP\-(?P<reviewPage>.+)$", playlist)
-            if match_ARP:
-                logger.debug(f'matched "album review page" {playlist}')
-                reviewPage = match_ARP["reviewPage"]
-                endpoint = f"https://pitchfork.com/{reviewPage}"
-                data = self.session.get(endpoint)
-                soup = bs(data.text, "html5lib")
-                script_re = re.compile(r"^window.App=(?P<json_data>.*);$")
-                json_script = soup.find("script", string=script_re)
-                json_data = json.loads(
-                    script_re.match(json_script.text)["json_data"]
-                )["context"]["dispatcher"]["stores"]["ReviewsStore"]["items"]
+            # # for album review pages
+            # match_ARP = re.match(r"^ARP\-(?P<reviewPage>.+)$", playlist)
+            # if match_ARP:
+            #     logger.debug(f'matched "album review page" {playlist}')
+            #     reviewPage = match_ARP["reviewPage"]
+            #     endpoint = f"https://pitchfork.com/{reviewPage}"
+            #     data = self.session.get(endpoint)
+            #     soup = bs(data.text, "html5lib")
+            #     script_re = re.compile(r"^window.App=(?P<json_data>.*);$")
+            #     json_script = soup.find("script", string=script_re)
+            #     json_data = json.loads(
+            #         script_re.match(json_script.text)["json_data"]
+            #     )["context"]["dispatcher"]["stores"]["ReviewsStore"]["items"]
 
-                item_list = [
-                    json_data[item]["tombstone"]["albums"][0]["album"]
-                    for item in json_data
-                ]
+            #     item_list = [
+            #         json_data[item]["tombstone"]["albums"][0]["album"]
+            #         for item in json_data
+            #     ]
 
-                playlist_results = []
+            #     playlist_results = []
 
-                for item in item_list:
+            #     for item in item_list:
 
-                    if not item["artists"]:
+            #         if not item["artists"]:
 
-                        # is there something better than 'unknown'?
-                        # if re.search('Various Artists', item['photos']['tout']['title']):
-                        #     item["artists"].append(
-                        #         {"display_name": "Various Artists"}
-                        #     )
-                        # else:
+            #             # is there something better than 'unknown'?
+            #             # if re.search('Various Artists', item['photos']['tout']['title']):
+            #             #     item["artists"].append(
+            #             #         {"display_name": "Various Artists"}
+            #             #     )
+            #             # else:
 
-                        logger.warn(
-                            f"expect wrong album: no artists listed for {item}"
-                        )
+            #             logger.warn(
+            #                 f"expect wrong album: no artists listed for {item}"
+            #             )
 
-                        item["artists"].append(
-                            {
-                                "display_name": "Unknown"
-                            }  # str(item["release_year"])}
-                        )
-                        album = f"'{item['display_name']}'"
-                    else:
-                        album = f"{item['artists'][0]['display_name']}, '{item['display_name']}'"
+            #             item["artists"].append(
+            #                 {
+            #                     "display_name": "Unknown"
+            #                 }  # str(item["release_year"])}
+            #             )
+            #             album = f"'{item['display_name']}'"
+            #         else:
+            #             album = f"{item['artists'][0]['display_name']}, '{item['display_name']}'"
 
-                    artists_albumtitle = (
-                        [artist["display_name"] for artist in item["artists"]],
-                        item["display_name"],
-                    )
+            #         artists_albumtitle = (
+            #             [artist["display_name"] for artist in item["artists"]],
+            #             item["display_name"],
+            #         )
 
-                    best_album_result = search_and_get_best_album(
-                        artists_albumtitle, self.ytmusic
-                    )
-                    if best_album_result:
-                        playlist_results.append(
-                            {
-                                "name": album,
-                                "id": best_album_result[0]["browseId"],
-                            }
-                        )
-                return playlist_results
+            #         best_album_result = search_and_get_best_album(
+            #             artists_albumtitle, self.ytmusic
+            #         )
+            #         if best_album_result:
+            #             playlist_results.append(
+            #                 {
+            #                     "name": album,
+            #                     "id": best_album_result[0]["browseId"],
+            #                 }
+            #             )
+            #     return playlist_results
 
             # for lists and guides pages
             match_LAG = re.match(r"^LAG\-(?P<ListAndGuidePage>.+)$", playlist)
@@ -111,6 +114,7 @@ class Pitchfork(ServiceClient):
                                 {
                                     "name": listitem.span.text + " Best Albums",
                                     "id": f"listoflists-YIMAlbums-{links[0]['href']}",
+                                    # "id": f"listoflists-Albums-{links[0]['href']}",
                                 }
                             )
                             track_dicts.append(
@@ -142,7 +146,7 @@ class Pitchfork(ServiceClient):
             # for lists and guides pages
             match_Albums = re.match(r"^Albums\-(?P<albumsPage>.+)$", playlist)
             if match_Albums:
-                logger.debug(f'matched "albums page" {playlist}')
+                logger.info(f'matched "albums page" {playlist}')
                 albumsPage = match_Albums["albumsPage"]
                 endpoint = f"https://pitchfork.com/{albumsPage}"
                 data = self.session.get(endpoint)
@@ -208,8 +212,52 @@ class Pitchfork(ServiceClient):
     def get_playlist_tracks(self, playlist):
 
         # deal with album review pages
-        if re.match(r"^ARP\-(?P<albumId>.+)$", playlist):
-            return self.get_playlists_details([playlist])
+        # if re.match(r"^ARP\-(?P<albumId>.+)$", playlist):
+        #     return self.get_playlists_details([playlist])
+
+        match_ARP = re.match(r"^ARP\-(?P<reviewPage>.+)$", playlist)
+        if match_ARP:
+            logger.debug(f'matched "album review page" {playlist}')
+            reviewPage = match_ARP["reviewPage"]
+            endpoint = f"https://pitchfork.com/{reviewPage}"
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+            script_re = re.compile(r"^window.App=(?P<json_data>.*);$")
+            json_script = soup.find("script", string=script_re)
+            json_data = json.loads(
+                script_re.match(json_script.text)["json_data"]
+            )["context"]["dispatcher"]["stores"]["ReviewsStore"]["items"]
+
+            item_list = [
+                json_data[item]["tombstone"]["albums"][0]["album"]
+                for item in json_data
+            ]
+
+            albums = []
+
+            for item in item_list:
+                if not item["artists"]:
+                    logger.warn(
+                        f"expect wrong album: no artists listed for {item}"
+                    )
+                    item["artists"].append(
+                        {
+                            "display_name": "Unknown"
+                        }  # str(item["release_year"])}
+                    )
+
+                albums.append(
+                    (
+                        [artist["display_name"] for artist in item["artists"]],
+                        item["display_name"],
+                    )
+                )
+
+            albums_to_return = search_and_get_best_albums(
+                [album for album in albums if album[1]], self.ytmusic
+            )
+
+            return list(flatten(albums_to_return))
 
         # deal with lists and guides pages
         if re.match(r"^LAG\-(?P<albumId>.+)$", playlist):
@@ -342,49 +390,50 @@ class Pitchfork(ServiceClient):
         track_dicts.append(
             {
                 "name": r"Best New Albums",
-                "id": r"listoflists-ARP-reviews/best/albums/?page=1",
+                # "id": r"listoflists-ARP-reviews/best/albums/?page=1",
+                "id": r"ARP-reviews/best/albums/?page=1",
             }
         )
 
         track_dicts.append(
             {
                 "name": r"Best New Reissues",
-                "id": r"listoflists-ARP-reviews/best/reissues/?page=1",
+                "id": r"ARP-reviews/best/reissues/?page=1",
             }
         )
 
         track_dicts.append(
             {
                 "name": r"8.0+ Reviews",
-                "id": r"listoflists-ARP-best/high-scoring-albums/?page=1",
+                "id": r"ARP-best/high-scoring-albums/?page=1",
             }
         )
 
         track_dicts.append(
             {
                 "name": r"Sunday Reviews",
-                "id": r"listoflists-ARP-reviews/sunday/?page=1",
+                "id": r"ARP-reviews/sunday/?page=1",
             }
         )
 
         track_dicts.append(
             {
                 "name": r"12 Recently Reviewed Albums",
-                "id": r"listoflists-ARP-reviews/albums/?page=1",
+                "id": r"ARP-reviews/albums/?page=1",
             }
         )
 
         track_dicts.append(
             {
                 "name": r"12 Previously Reviewed Albums",
-                "id": r"listoflists-ARP-reviews/albums/?page=2",
+                "id": r"ARP-reviews/albums/?page=2",
             }
         )
 
         track_dicts.append(
             {
                 "name": r"12 Albums reviewed a while ago",
-                "id": r"listoflists-ARP-reviews/albums/?page=3",
+                "id": r"ARP-reviews/albums/?page=3",
             }
         )
 

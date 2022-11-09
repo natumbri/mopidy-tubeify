@@ -361,6 +361,8 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     and album["browseId"]
                     and "title" in album
                     and album["title"]
+                    and "artists" in album
+                    and album["artists"]
                 ]
 
             if good_tracks:
@@ -398,7 +400,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     [
                         Ref.album(
                             uri=f"yt:playlist:{album['browseId']}",
-                            name=album["title"],
+                            name=f"{', '.join([artist['name'] for artist in album['artists']])}, '{album['title']}'",
                         )
                         for album in good_albums
                     ]

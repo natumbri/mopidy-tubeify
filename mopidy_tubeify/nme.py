@@ -14,7 +14,7 @@ class NME(ServiceClient):
         # deal with featured new releases pages
         if re.match(r"^FNR\-(?P<albumId>.+)$", playlist):
             return self.get_playlists_details([playlist])
-
+        logger.info(playlist)
         artists_albumtitle = (
             [json.loads(playlist)["artist"]],
             json.loads(playlist)["album"],

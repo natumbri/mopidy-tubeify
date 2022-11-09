@@ -1,4 +1,3 @@
-import json
 import re
 
 from bs4 import BeautifulSoup as bs
@@ -6,102 +5,44 @@ from bs4 import BeautifulSoup as bs
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
-from mopidy_tubeify.yt_matcher import search_and_get_best_album
+from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 
 
 class Discogs(ServiceClient):
-    def get_playlists_details(self, playlists):
-        def job(playlist):
-
-            # for what to listen to if you like lists
-            match_WTLT = re.match(r"^WTLT\-(?P<wtltpage>.+)$", playlist)
-            if match_WTLT:
-                logger.debug(f'matched "what to listen to page:" {playlist}')
-                playlist = match_WTLT["wtltpage"]
-                endpoint = f"https://www.discogs.com/digs/music/{playlist}"
-                data = self.session.get(endpoint)
-                soup = bs(data.text, "html5lib")
-                new_releases_filter = soup.find_all(
-                    "div", class_=re.compile(r".*release-item.*")
-                )
-
-                albums_dicts = [
-                    {
-                        "artist": new_release.find(
-                            "div", class_=re.compile(r".*release-artist.*")
-                        ).text,
-                        "album": new_release.find(
-                            "div", class_=re.compile(r".*release-title.*")
-                        ).text,
-                    }
-                    for new_release in new_releases_filter
-                ]
-
-                return [
-                    {
-                        "name": f"{album['artist']}, {album['album']}",
-                        "id": f"{json.dumps(album)}",
-                    }
-                    for album in albums_dicts
-                ]
-            else:
-                # for other sorts of allmusic playlists
-                pass
-
-        results = []
-
-        # does allmusic uses a captcha? be careful before going multi-threaded
-        [results.append(job(playlist)) for playlist in playlists]
-
-        return list(flatten(results))
-
     def get_playlist_tracks(self, playlist):
-
         # deal with what to listen to pages
-        if re.match(r"^WTLT\-(?P<albumId>.+)$", playlist):
-            return self.get_playlists_details([playlist])
-
-        artists_albumtitle = (
-            [json.loads(playlist)["artist"]],
-            json.loads(playlist)["album"],
-        )
-
-        try:
-            # experimental, using ytmusic album instead of track-by-track matching
-            album_browseId_list = search_and_get_best_album(
-                artists_albumtitle=artists_albumtitle, ytmusic=self.ytmusic
+        match_WTLT = re.match(r"^WTLT\-(?P<wtltpage>.+)$", playlist)
+        if match_WTLT:
+            logger.debug(f'matched "what to listen to page:" {playlist}')
+            playlist = match_WTLT["wtltpage"]
+            endpoint = f"https://www.discogs.com/digs/music/{playlist}"
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+            new_releases_filter = soup.find_all(
+                "div", class_=re.compile(r".*release-item.*")
             )
-            album_browseId = album_browseId_list[0]["browseId"]
-            album = self.ytmusic.get_album(album_browseId)
-            tracks = album["tracks"]
 
-            fields = ["artists", "thumbnails"]
-            [
-                track.update({field: album[field]})
-                for field in fields
-                for track in tracks
-                if track[field] is None
-            ]
-
-            [
-                track.update(
-                    {
-                        "album": {
-                            "name": album["title"],
-                            "id": album_browseId,
-                        }
-                    }
+            albums = [
+                (
+                    new_release.find(
+                        "div", class_=re.compile(r".*release-artist.*")
+                    )
+                    .text.strip()
+                    .split(" / "),
+                    new_release.find(
+                        "div", class_=re.compile(r".*release-title.*")
+                    ).text.strip(),
                 )
-                for track in tracks
+                for new_release in new_releases_filter
             ]
-            return tracks
 
-        except Exception as e:
-
-            logger.warn(
-                f"error {e} getting album {artists_albumtitle} from ytmusic"
+            albums_to_return = search_and_get_best_albums(
+                [album for album in albums if album[1]], self.ytmusic
             )
 
+            return list(flatten(albums_to_return))
+
+        # deal with other things
         return
 
     def get_service_homepage(self):
@@ -121,7 +62,7 @@ class Discogs(ServiceClient):
         if_you_like_results = [
             {
                 "name": f"{if_you_like_dict['title']}",
-                "id": f"listoflists-WTLT-{if_you_like_dict['href'][31:]}",
+                "id": f"WTLT-{if_you_like_dict['href'][31:]}",
             }
             for if_you_like_dict in if_you_like_dicts
         ]
@@ -143,7 +84,7 @@ class Discogs(ServiceClient):
         of_all_time_results = [
             {
                 "name": f"{of_all_time_dict['title']}",
-                "id": f"listoflists-WTLT-{of_all_time_dict['href'][31:]}",
+                "id": f"WTLT-{of_all_time_dict['href'][31:]}",
             }
             for of_all_time_dict in of_all_time_dicts
         ]
