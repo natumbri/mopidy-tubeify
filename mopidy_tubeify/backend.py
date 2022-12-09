@@ -107,9 +107,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
 
         self.library.nme = NME(proxy, headers)
         self.library.nme.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "nme", "service_name": "NME Reviewed Albums"}
-        )
+        self.services.append({"service_uri": "nme", "service_name": "NME"})
 
         self.library.pitchfork = Pitchfork(proxy, headers)
         self.library.pitchfork.ytmusic = self.ytmusic

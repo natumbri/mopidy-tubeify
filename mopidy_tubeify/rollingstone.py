@@ -149,11 +149,14 @@ class RollingStone(ServiceClient):
         data = self.session.get(endpoint + "/", allow_redirects=False)
         soup = bs(data.text, "html5lib")
         json_script = soup.find("script", id="pmc-lists-front-js-extra")
-        script_text = unidecode(json_script.text)
+        script_text = unidecode(json_script.contents[0])
         json_re = re.compile(r"var\ pmcGalleryExports\ \=\ (?P<json_var>.+);")
 
         return json.loads(
             unescape(json_re.search(script_text)["json_var"])
             .replace("‘", "'")
             .replace("’", "'")
+            # unescape(json_re.search(unidecode(script_text))["json_var"])
+            # .replace("‘", "'")
+            # .replace("’", "'")
         )

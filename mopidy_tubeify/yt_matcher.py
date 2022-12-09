@@ -477,7 +477,7 @@ def _order_yt_results(
         # ! meaningful impact when we calculate the avg match value
         if song_duration and song_duration > 0:
             delta = result["duration_seconds"] - song_duration  # ! check this
-            non_match_value = (delta ** 2) / song_duration * 100
+            non_match_value = (delta**2) / song_duration * 100
 
             time_match = 100 - non_match_value
 

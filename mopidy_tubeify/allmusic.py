@@ -13,7 +13,6 @@ from mopidy_tubeify.yt_matcher import (
 
 class AllMusic(ServiceClient):
     def get_playlists_details(self, playlists):
-        logger.info(f"{playlists}")
 
         if playlists[0] == "genres":
             endpoint = f"https://www.allmusic.com/{playlists[0]}"

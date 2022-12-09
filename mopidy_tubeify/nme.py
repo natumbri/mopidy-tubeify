@@ -4,86 +4,70 @@ import re
 from bs4 import BeautifulSoup as bs
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
-from mopidy_tubeify.yt_matcher import search_and_get_best_album
+from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 
 
 class NME(ServiceClient):
     def get_playlist_tracks(self, playlist):
 
-        # deal with featured new releases pages
-        if re.match(r"^FNR\-(?P<albumId>.+)$", playlist):
-            return self.get_playlists_details([playlist])
-        logger.info(playlist)
-        artists_albumtitle = (
-            [json.loads(playlist)["artist"]],
-            json.loads(playlist)["album"],
-        )
+        # album review pages
+        match_ARP = re.match(r"^ARP\-(?P<reviewPage>.+)$", playlist)
+        if match_ARP:
+            logger.info(f'matched "album review page" {playlist}')
+            reviewPage = match_ARP["reviewPage"]
+            endpoint = f"https://www.nme.com/{reviewPage}"
 
-        try:
-            # experimental, using ytmusic album instead of track-by-track matching
-            album_browseId_list = search_and_get_best_album(
-                artists_albumtitle=artists_albumtitle, ytmusic=self.ytmusic
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+            album_divs = soup.find_all(
+                "div",
+                class_="tdb_module_loop td_module_wrap td-animation-stack",
             )
-            album_browseId = album_browseId_list[0]["browseId"]
-            album = self.ytmusic.get_album(album_browseId)
-            tracks = album["tracks"]
+            album_re = re.compile(
+                r"^(?P<artist>.+)\ \–\ \‘(?P<album>.+)\’((?P<ep>\ EP))?\ review.+$"
+            )
 
-            fields = ["artists", "thumbnails"]
-            [
-                track.update({field: album[field]})
-                for field in fields
-                for track in tracks
-                if track[field] is None
-            ]
-
-            [
-                track.update(
-                    {
-                        "album": {
-                            "name": album["title"],
-                            "id": album_browseId,
-                        }
-                    }
+            albums = [album_re.search(album.a["title"]) for album in album_divs]
+            artists_albumtitle = [
+                (
+                    [album["artist"]],
+                    f"{album['album']}{album['ep'] or ''}",
                 )
-                for track in tracks
+                for album in albums
+                if album
             ]
-            return tracks
 
-        except Exception as e:
-
-            logger.warn(
-                f"error {e} getting album {artists_albumtitle} from ytmusic"
+            albums_to_return = search_and_get_best_albums(
+                [album for album in artists_albumtitle if album[1]],
+                self.ytmusic,
             )
 
-        return
+            return list(flatten(albums_to_return))
 
     def get_service_homepage(self):
+        track_dicts = []
 
-        endpoint = r"https://www.nme.com/reviews/album"
-        data = self.session.get(endpoint)
-        soup = bs(data.text, "html5lib")
-        album_divs = soup.find_all(
-            "div", class_="tdb_module_loop td_module_wrap td-animation-stack"
-        )
-        album_re = re.compile(
-            r"^(?P<artist>.+)\ \–\ \‘(?P<album>.+)\’((?P<ep>\ EP))?\ review.+$"
+        track_dicts.append(
+            {
+                "name": r"Recently Reviewed Albums",
+                "id": r"ARP-reviews/album",
+            }
         )
 
-        albums = [album_re.search(album.a["title"]) for album in album_divs]
-
-        albums_dicts = [
+        track_dicts.append(
             {
-                "artist": album["artist"],
-                "album": f"{album['album']}{album['ep'] or ''}",
+                "name": r"Previously Reviewed Albums",
+                "id": r"ARP-reviews/album/page/2",
             }
-            for album in albums
-        ]
+        )
 
-        return [
+        track_dicts.append(
             {
-                "name": f"{album['artist']}, {album['album']}",
-                "id": f"{json.dumps(album)}",
+                "name": r"Albums reviewed a while ago",
+                "id": r"ARP-reviews/album/page/3",
             }
-            for album in albums_dicts
-        ]
+        )
+
+        return track_dicts

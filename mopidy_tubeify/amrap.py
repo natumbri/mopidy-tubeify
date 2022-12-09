@@ -36,8 +36,7 @@ class Amrap(ServiceClient):
         )
         program_details_script = program_details_soup.find(
             "div", class_="static"
-        ).script.text
-
+        ).script.contents[0]
         program_details = {
             "owner": False,
             "csrfToken": re.search(
