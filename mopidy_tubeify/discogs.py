@@ -24,10 +24,16 @@ class Discogs(ServiceClient):
 
             albums = [
                 (
-                    new_release.find('div', class_=re.compile(r'.*release(?:-block)?-artist.*'))
+                    new_release.find(
+                        "div",
+                        class_=re.compile(r".*release(?:-block)?-artist.*"),
+                    )
                     .text.strip()
                     .split(" / "),
-                    new_release.find('div', class_=re.compile(r'.*release(?:-block)?-title.*')).text.strip(),
+                    new_release.find(
+                        "div",
+                        class_=re.compile(r".*release(?:-block)?-title.*"),
+                    ).text.strip(),
                 )
                 for new_release in new_releases_filter
             ]

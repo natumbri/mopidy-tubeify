@@ -1,14 +1,16 @@
 import json
+import re
 
-from oauthlib.oauth2 import BackendApplicationClient
-from requests_oauthlib import OAuth2Session
+from bs4 import BeautifulSoup as bs
 
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import find_in_obj
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
-from bs4 import BeautifulSoup as bs
-import re
+
+# from oauthlib.oauth2 import BackendApplicationClient
+# from requests_oauthlib import OAuth2Session
+
 
 class Spotify(ServiceClient):
     def get_spotify_headers(self, endpoint=r"https://open.spotify.com/"):
@@ -19,7 +21,7 @@ class Spotify(ServiceClient):
         page = self.session.get(f"{endpoint}__noul__")
         soup = bs(page.text, "html.parser")
         access_token_tag = soup.find("script", text=re.compile("accessToken"))
-        json_obj = json.loads(access_token_tag.contents[0]) 
+        json_obj = json.loads(access_token_tag.contents[0])
         token = {"access_token": json_obj["accessToken"]}
 
         # # use oauth2 to get token; doesn't allow access to spotify homepage

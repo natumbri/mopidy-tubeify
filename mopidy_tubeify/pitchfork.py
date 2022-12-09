@@ -23,7 +23,7 @@ class Pitchfork(ServiceClient):
             endpoint = f"https://pitchfork.com/{listAndGuidePage}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
-            links = soup.find_all("a", class_="title-link module__title-link")
+            # links = soup.find_all("a", class_="title-link module__title-link")
             lists = soup.find("section", class_="featured-lists").find_all("li")
 
             list_dicts = []

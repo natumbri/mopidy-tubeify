@@ -1,15 +1,18 @@
-import json
+# import json
 import re
-from urllib.parse import unquote
-from unidecode import unidecode
 
 from bs4 import BeautifulSoup as bs
 
+# from urllib.parse import unquote
+from unidecode import unidecode
+
 from mopidy_tubeify import logger
-from mopidy_tubeify.data import find_in_obj
+
+# from mopidy_tubeify.data import find_in_obj
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
-from mopidy_youtube.timeformat import ISO8601_to_seconds
+
+# from mopidy_youtube.timeformat import ISO8601_to_seconds
 
 
 class Apple(ServiceClient):
@@ -74,7 +77,7 @@ class Apple(ServiceClient):
                 "name": playlist["attributes"]["name"],
                 "id": playlist["attributes"]["url"].removeprefix(
                     "https://music.apple.com/us/playlist/"
-                )
+                ),
             }
             for playlist in playlists
         ]
@@ -201,10 +204,9 @@ class Apple(ServiceClient):
         # with open('/tmp/apple-homepage-data.json', 'w') as f:
         #     json.dump(data, f)
 
-
-        content_re = re.compile(
-            r"^.+platform\.web[^\[]+(?P<content>.+\])\}\"\}$"
-        )
+        # content_re = re.compile(
+        #     r"^.+platform\.web[^\[]+(?P<content>.+\])\}\"\}$"
+        # )
         playlistid_re = re.compile(r"^.+playlist/(?P<playlistid>.+$)")
 
         endpoint = r"https://music.apple.com/us/browse"
