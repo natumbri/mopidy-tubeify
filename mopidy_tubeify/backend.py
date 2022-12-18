@@ -16,6 +16,7 @@ from mopidy_tubeify.discogs import Discogs
 from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
 from mopidy_tubeify.nme import NME
+from mopidy_tubeify.npr import NPR
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.rollingstone import RollingStone
 from mopidy_tubeify.spotify import Spotify
@@ -108,6 +109,10 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library.nme = NME(proxy, headers)
         self.library.nme.ytmusic = self.ytmusic
         self.services.append({"service_uri": "nme", "service_name": "NME"})
+
+        self.library.npr = NPR(proxy, headers)
+        self.library.npr.ytmusic = self.ytmusic
+        self.services.append({"service_uri": "npr", "service_name": "NPR"})
 
         self.library.pitchfork = Pitchfork(proxy, headers)
         self.library.pitchfork.ytmusic = self.ytmusic
