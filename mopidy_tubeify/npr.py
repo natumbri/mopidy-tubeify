@@ -3,8 +3,10 @@ import re
 from bs4 import BeautifulSoup as bs
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import (
+    search_and_get_best_albums,
     search_and_get_best_match,
 )
 
@@ -14,18 +16,25 @@ class NPR(ServiceClient):
 
         # is this really a list of playlists, or is it a special case?
         if len(playlists) == 1:
-            print(playlists)
             # did we get here from the homepage?
             if playlists[0] == "NPR100BSO2022":
                 endpoint = r"https://www.npr.org/2022/12/15/1135802083/100-best-songs-2022-page-1"
                 idPrefix = "BSOx"
+                page1 = [
+                    {"name": "100-81", "id": f"{idPrefix}-{endpoint[19:]}"}
+                ]
+
+            elif playlists[0] == "NPR50BAO2022":
+                endpoint = r"https://www.npr.org/2022/12/12/1134898067/50-best-albums-2022-page-1"
+                idPrefix = "BAOx"
+                page1 = [{"name": "50-41", "id": f"{idPrefix}-{endpoint[19:]}"}]
 
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
 
             segments_filter = soup.find("div", class_="subtopics")
 
-            return [{"name": "100-81", "id": f"{idPrefix}-{endpoint[19:]}"}] + [
+            return page1 + [
                 {"name": atag.text, "id": f"{idPrefix}-{atag['href']}"}
                 for atag in segments_filter.find_all("a")
             ]
@@ -36,46 +45,19 @@ class NPR(ServiceClient):
 
     def get_playlist_tracks(self, playlist):
 
-        # # is this a segment from xAOAT? (Albums)
-        # match_xAOAT = re.match(r"^[A-Z]{1,2}AOAT\-(?P<segment>.+)$", playlist)
-        # if match_xAOAT:
-        #     print('match')
-        #     albums_json = self._get_RS_json(match_xAOAT["segment"])["gallery"]
-        #     name_artists = [
-        #         re.match(
-        #             r"^(?P<artist>.+),\s'(?P<name>.+)'(\s\((?P<year>\d{4})\))?$",
-        #             album["title"],
-        #         )
-        #         for album in albums_json
-        #     ]
+        # is this a segment from BAOx? (Albums)
+        match_BAOx = re.match(r"^BAOx\-(?P<segment>.+)$", playlist)
+        if match_BAOx:
+            albums_json = self._get_NPR_json(match_BAOx["segment"])
+            albums = [(album[0].split("&"), album[1]) for album in albums_json]
 
-        #     # works for 100 greatest country albums where "title" is just the artist
-        #     # and "additionalDescription" is the name of the album
-        #     if not [album for album in name_artists if album]:
-        #         name_artists = [
-        #             {
-        #                 "artist": album["title"],
-        #                 "name": album["additionalDescription"].replace("'", ""),
-        #             }
-        #             for album in albums_json
-        #         ]
+            ytalbums = list(
+                flatten(search_and_get_best_albums(albums, self.ytmusic))
+            )
 
-        #     albums = [
-        #         (
-        #             album["artist"].split(","),
-        #             album["name"],
-        #         )
-        #         for album in name_artists
-        #         if album
-        #     ]
+            return ytalbums
 
-        #     ytalbums = list(
-        #         flatten(search_and_get_best_albums(albums, self.ytmusic))
-        #     )
-
-        #     return ytalbums
-
-        # is this a segment of BSOx?
+        # is this a segment of BSOx? (Songs)
         match_BSOx = re.match(r"^BSOx\-(?P<segment>.+)$", playlist)
         if match_BSOx:
             tracks_json = self._get_NPR_json(match_BSOx["segment"])
@@ -101,11 +83,14 @@ class NPR(ServiceClient):
             {
                 "name": "NPR Music's 100 Best Songs of 2022",
                 "id": "listoflists-NPR100BSO2022",
-            }
+            },
+            {
+                "name": "NPR Music's 50 Best Albums of 2022",
+                "id": "listoflists-NPR50BAO2022",
+            },
         ]
 
     def _get_NPR_json(self, endpoint):
-        logger.info(endpoint)
         data = self.session.get("https://npr.org" + endpoint)
         soup = bs(data.text, "html5lib")
         list_numbers = soup.find_all("h6", text=re.compile(r"\d{1,3}\."))
