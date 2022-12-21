@@ -170,16 +170,25 @@ class Amrap(ServiceClient):
         episode_url = "https://airnet.org.au/program/ajax-server/getEpisode.php"
         episode_response = self.session.post(episode_url, data=program_details)
         episode_response_soup = bs(
-            episode_response.content.decode("unicode-escape"), "lxml"
+            episode_response.content.decode("unicode-escape"),
+            "html5lib",  # "lxml"
         )
         track_table = episode_response_soup.find("table")
         track_class = re.compile(".*playlist-mainText.*")
         tracks = track_table.find_all("td", class_=track_class)
-        track_list = [track.get_text(strip=True) for track in tracks]
+        track_list = [
+            track.get_text(strip=True)
+            .replace("\n", "")
+            .replace("\t", "")
+            .replace("<\\/td>", "")
+            .replace(":", "")
+            .strip()
+            for track in tracks
+        ]
         track_dicts = []
         for track in track_list:
             this_track = [
-                item.strip().replace("\\/", "/")
+                item.strip().replace("\\/", "/").replace("</a>", "")
                 for item in re.split(r'\.| -|- |\\\\n|\||"| \\\\/ ', track)
             ]
 
