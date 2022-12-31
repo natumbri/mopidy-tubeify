@@ -13,7 +13,6 @@ from mopidy_tubeify.yt_matcher import (
 
 class AllMusic(ServiceClient):
     def get_playlists_details(self, playlists):
-
         if playlists[0] == "genres":
             endpoint = f"https://www.allmusic.com/{playlists[0]}"
             genre_block_re = re.compile(r"^genre\s(left|middle|right)$")
@@ -27,6 +26,39 @@ class AllMusic(ServiceClient):
                     "id": f"listoflists-genre-{genre.a['href']}",
                 }
                 for genre in genres
+            ]
+
+        elif playlists[0] == "editorschoice":
+            endpoint = f"https://www.allmusic.com/{playlists[0]}"
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+
+            year_filter = soup.find("select", {"name": "year-filter"})
+            years = year_filter.find_all("option")
+
+            return [
+                {
+                    "name": f"Editors' Choices, {year.text.strip()}",
+                    "id": f"listoflists-EC-{year['value']}",
+                }
+                for year in years
+            ]
+
+        elif re.match(r"^EC\-(?P<year>\d{4})$", playlists[0]):
+            endpoint = r"https://www.allmusic.com/editorschoice"
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+
+            year = re.match(r"^EC\-(?P<year>\d{4})$", playlists[0])["year"]
+            month_filter = soup.find("select", {"name": "month-filter"})
+            months = month_filter.find_all("option")
+
+            return [
+                {
+                    "name": month.text.strip(),
+                    "id": f"ECMY-https://www.allmusic.com/newreleases/editorschoice/{month.text.strip().lower()}-{year}",
+                }
+                for month in months
             ]
 
         elif re.match(r"^genre\-(?P<genreURL>.+)$", playlists[0]):
@@ -74,6 +106,16 @@ class AllMusic(ServiceClient):
             soup = bs(data.text, "html5lib")
             page_albums_filter = soup.find_all("div", class_="new-release")
 
+        match_ECMY = re.match(r"^ECMY\-(?P<albumsURL>.+)$", playlist)
+        if match_ECMY:
+            logger.debug(f'matched "editors choice month-year" {playlist}')
+            endpoint = match_ECMY["albumsURL"]
+            data = self.session.get(endpoint)
+            soup = bs(data.text, "html5lib")
+            page_albums_filter = soup.find_all(
+                "div", class_="editors-choice-item"
+            )
+
         # deal with genre and style album pages
         match_albums = re.match(r"^albums\-(?P<albumsURL>.+)$", playlist)
         if match_albums:
@@ -84,9 +126,6 @@ class AllMusic(ServiceClient):
             page_albums_filter = soup.find(
                 "section", class_="album-highlights"
             ).find_all("div", class_="album-highlight")
-            # html = page_albums_filter[0].prettify("utf-8")
-            # with open("/tmp/output1.html", "wb") as file:
-            #     file.write(html)
 
         if page_albums_filter:
             albums = [
@@ -144,10 +183,14 @@ class AllMusic(ServiceClient):
         week_filter = soup.find("select", {"name": "week-filter"})
         weeks = week_filter.find_all("option")
 
-        return [
-            {
-                "name": f"Featured New Releases, {week.text.strip()}",
-                "id": f"FNR-{week['value']}",
-            }
-            for week in weeks
-        ] + [{"name": "Genres", "id": "listoflists-genres"}]
+        return (
+            [
+                {
+                    "name": f"Featured New Releases, {week.text.strip()}",
+                    "id": f"FNR-{week['value']}",
+                }
+                for week in weeks
+            ]
+            + [{"name": "Genres", "id": "listoflists-genres"}]
+            + [{"name": "Editors' Choice", "id": "listoflists-editorschoice"}]
+        )
