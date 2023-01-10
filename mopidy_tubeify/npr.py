@@ -12,6 +12,10 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class NPR(ServiceClient):
+
+    service_uri = "npr"
+    service_name = "NPR"
+
     def get_playlists_details(self, playlists):
 
         # is this really a list of playlists, or is it a special case?

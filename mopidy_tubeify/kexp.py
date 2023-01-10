@@ -12,6 +12,10 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class KEXP(ServiceClient):
+
+    service_uri = "kexp"
+    service_name = "KEXP 90.3FM"
+
     def get_playlists_details(self, playlists):
         def job(playlist):
             # deal with DJ pages

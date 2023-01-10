@@ -12,6 +12,10 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class AllMusic(ServiceClient):
+
+    service_uri = "allmusic"
+    service_name = "AllMusic"
+
     def get_playlists_details(self, playlists):
         if playlists[0] == "genres":
             endpoint = f"https://www.allmusic.com/{playlists[0]}"
@@ -36,13 +40,17 @@ class AllMusic(ServiceClient):
             year_filter = soup.find("select", {"name": "year-filter"})
             years = year_filter.find_all("option")
 
-            return [
-                {
-                    "name": f"Editors' Choices, {year.text.strip()}",
-                    "id": f"listoflists-EC-{year['value']}",
-                }
-                for year in years
-            ]
+            return sorted(
+                [
+                    {
+                        "name": f"Editors' Choices, {year.text.strip()}",
+                        "id": f"listoflists-EC-{year['value']}",
+                    }
+                    for year in years
+                ],
+                key=lambda d: d["id"],
+                reverse=True,
+            )
 
         elif re.match(r"^EC\-(?P<year>\d{4})$", playlists[0]):
             endpoint = r"https://www.allmusic.com/editorschoice"

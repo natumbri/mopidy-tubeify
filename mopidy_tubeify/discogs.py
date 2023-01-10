@@ -9,6 +9,10 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 
 
 class Discogs(ServiceClient):
+
+    service_uri = "discogs"
+    service_name = "Discogs"
+
     def get_playlist_tracks(self, playlist):
         # deal with what to listen to pages
         match_WTLT = re.match(r"^WTLT\-(?P<wtltpage>.+)$", playlist)

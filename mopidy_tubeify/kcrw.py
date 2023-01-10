@@ -11,6 +11,10 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class KCRW(ServiceClient):
+
+    service_uri = "kcrw"
+    service_name = "KCRW 89.9FM"
+
     def get_playlists_details(self, playlists):
         def job(playlist):
             # deal with program pages

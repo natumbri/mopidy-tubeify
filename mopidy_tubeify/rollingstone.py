@@ -15,6 +15,10 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class RollingStone(ServiceClient):
+
+    service_uri = "rollingstone"
+    service_name = "Rolling Stone Magazine"
+
     def get_playlists_details(self, playlists):
 
         # is this really a list of playlists, or is it a special case?

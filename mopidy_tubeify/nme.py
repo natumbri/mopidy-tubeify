@@ -10,6 +10,10 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 
 
 class NME(ServiceClient):
+
+    service_uri = "nme"
+    service_name = "NME"
+
     def get_playlist_tracks(self, playlist):
 
         # album review pages

@@ -51,99 +51,51 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
 
         self.ytmusic = YTMusic()
 
-        self.services = []
-        if self.applemusic_playlists:
-            self.library.applemusic = Apple(proxy, headers)
-            self.library.applemusic.ytmusic = self.ytmusic
-            self.services.append(
-                {"service_uri": "applemusic", "service_name": "Apple Music"}
-            )
-        if self.spotify_users or self.spotify_playlists:
-            self.library.spotify = Spotify(proxy, headers)
-            self.library.spotify.ytmusic = self.ytmusic
-            self.services.append(
-                {"service_uri": "spotify", "service_name": "Spotify"}
-            )
+        standard_services = [
+            AllMusic,
+            Apple,
+            Discogs,
+            KCRW,
+            KEXP,
+            NME,
+            NPR,
+            Pitchfork,
+            RollingStone,
+            Spotify,
+            TripleR,
+        ]
+
+        self.services = [
+            service(proxy, headers, self.ytmusic)
+            for service in standard_services
+        ]
+
         if self.tidal_playlists:
-            # Tidal seems to be fussy about the User-Agent, and requires "Accept"
-            self.library.tidal = Tidal(
-                proxy,
-                headers={
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 6.1) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/80.0.3987.149 Safari/537.36"
-                    ),
-                    "Accept": "*/*",
-                },
-            )
-            self.library.tidal.ytmusic = self.ytmusic
             self.services.append(
-                {"service_uri": "tidal", "service_name": "Tidal"}
+                Tidal(
+                    proxy,
+                    {
+                        "User-Agent": (
+                            "Mozilla/5.0 (Windows NT 6.1) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/80.0.3987.149 Safari/537.36"
+                        ),
+                        "Accept": "*/*",
+                    },
+                    self.ytmusic,
+                )
             )
-
-        self.library.allmusic = AllMusic(proxy, headers)
-        self.library.allmusic.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "allmusic", "service_name": "AllMusic"}
-        )
-
-        self.library.discogs = Discogs(proxy, headers)
-        self.library.discogs.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "discogs", "service_name": "Discogs"}
-        )
-
-        self.library.kcrw = KCRW(proxy, headers)
-        self.library.kcrw.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "kcrw", "service_name": "KCRW 89.9FM"}
-        )
-
-        self.library.kexp = KEXP(proxy, headers)
-        self.library.kexp.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "kexp", "service_name": "KEXP 90.3FM"}
-        )
-
-        self.library.nme = NME(proxy, headers)
-        self.library.nme.ytmusic = self.ytmusic
-        self.services.append({"service_uri": "nme", "service_name": "NME"})
-
-        self.library.npr = NPR(proxy, headers)
-        self.library.npr.ytmusic = self.ytmusic
-        self.services.append({"service_uri": "npr", "service_name": "NPR"})
-
-        self.library.pitchfork = Pitchfork(proxy, headers)
-        self.library.pitchfork.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "pitchfork", "service_name": "Pitchfork"}
-        )
-
-        self.library.rollingstone = RollingStone(proxy, headers)
-        self.library.rollingstone.ytmusic = self.ytmusic
-        self.services.append(
-            {
-                "service_uri": "rollingstone",
-                "service_name": "Rolling Stone Magazine",
-            }
-        )
-
-        self.library.tripler = TripleR(proxy, headers)
-        self.library.tripler.ytmusic = self.ytmusic
-        self.services.append(
-            {"service_uri": "tripler", "service_name": "3RRR 102.7FM"}
-        )
 
         # Amrap() is a generic client for AMRAP Radio Stations
         # see https://radiopages.info/ for a list of them
-        self.library.pbsfm = Amrap(proxy, headers, stationId="3pbs")
-        self.library.pbsfm.ytmusic = self.ytmusic
         self.services.append(
-            {
-                "service_uri": "pbsfm",
-                "service_name": "3PBS 106.7FM",
-            }
+            Amrap(
+                proxy,
+                headers,
+                self.ytmusic,
+                stationId="3pbs",
+                stationName="3PBS 106.7FM",
+            )
         )
 
 
@@ -163,6 +115,16 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
     tubeify_cache = TTLCache(maxsize=cache_max_len, ttl=cache_ttl)
 
+    def string_to_service(self, service_string):
+        return next(
+            (
+                service
+                for service in self.backend.services
+                if service.service_uri == service_string
+            ),
+            None,
+        )
+
     @cached(cache=tubeify_cache)
     def browse(self, uri):
         def get_refs(kind, selected_services, listoflists=None):
@@ -176,17 +138,14 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                 )
 
             for selected_service in selected_services:
-                service_method = getattr(
-                    self, selected_service["service_uri"], None
-                )
                 get_details_method = getattr(
-                    service_method, f"get_{kind}_details", None
+                    selected_service, f"get_{kind}_details", None
                 )
 
                 if not listoflists:
                     listoflists = getattr(
                         self.backend,
-                        f"{selected_service['service_uri']}_{kind}",
+                        f"{selected_service.service_uri}_{kind}",
                         [],
                     )
 
@@ -201,7 +160,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                         Ref.directory(
                             uri=(
                                 f"tubeify:"
-                                f"{selected_service['service_uri']}_"
+                                f"{selected_service.service_uri}_"
                                 f"{kind[:-1]}:"
                                 f"{item['id']}"
                             ),
@@ -225,8 +184,8 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
             servicerefs = [
                 Ref.directory(
-                    uri=f"tubeify:{service['service_uri']}:root",
-                    name=service["service_name"],
+                    uri=f"tubeify:{service.service_uri}:root",
+                    name=service.service_name,
                 )
                 for service in self.backend.services
             ]
@@ -238,21 +197,11 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             return directoryrefs
 
         match = re.match(r"tubeify:(?P<service>.+):(?P<kind>.+)$", uri)
-
         if match:
             if match["service"] == "all":
                 selected_services = self.backend.services
             else:
-                selected_services = [
-                    next(
-                        (
-                            service
-                            for service in self.backend.services
-                            if service["service_uri"] == match["service"]
-                        ),
-                        None,
-                    )
-                ]
+                selected_services = [self.string_to_service(match["service"])]
 
         if match and match["kind"] == "root":
             directoryrefs = []
@@ -260,21 +209,21 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
                 directoryrefs.append(
                     Ref.directory(
-                        uri=f"tubeify:{selected_service['service_uri']}:home",
-                        name=f"{selected_service['service_name']} Homepage",
+                        uri=f"tubeify:{selected_service.service_uri}:home",
+                        name=f"{selected_service.service_name} Homepage",
                     )
                 )
 
                 for list_type in ["users", "playlists"]:
                     if getattr(
                         self.backend,
-                        f"{selected_service['service_uri']}_{list_type}",
+                        f"{selected_service.service_uri}_{list_type}",
                         None,
                     ):
                         directoryrefs.append(
                             Ref.directory(
-                                uri=f"tubeify:{selected_service['service_uri']}:{list_type}",
-                                name=f"{selected_service['service_name']} {list_type}",
+                                uri=f"tubeify:{selected_service.service_uri}:{list_type}",
+                                name=f"{selected_service.service_name} {list_type}",
                             )
                         )
             return directoryrefs
@@ -282,14 +231,11 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
         elif match and match["kind"] == "home":
             playlistrefs = []
             for selected_service in selected_services:
-                service_method = getattr(
-                    self, selected_service["service_uri"], None
-                )
-                playlists = service_method.get_service_homepage()
+                playlists = selected_service.get_service_homepage()
                 playlistrefs.extend(
                     [
                         Ref.directory(
-                            uri=f"tubeify:{selected_service['service_uri']}_playlist:{playlist['id']}",
+                            uri=f"tubeify:{selected_service.service_uri}_playlist:{playlist['id']}",
                             name=playlist["name"],
                         )
                         for playlist in playlists
@@ -309,10 +255,10 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
         # if we're looking at a user, return a list of the user's playlists
         elif extract_user_id(uri):
             service, user_uri = extract_user_id(uri)
+            service = self.string_to_service(service)
             logger.debug(f"browse {service} user {user_uri}")
             playlistrefs = []
-            service_method = getattr(self, service, None)
-            playlists = service_method.get_user_playlists(user_uri)
+            playlists = service.get_user_playlists(user_uri)
             playlistrefs = [
                 Ref.directory(
                     uri=f"tubeify:{service}_playlist:{playlist['id']}",
@@ -326,8 +272,8 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
         # if we're looking at a playlist, return a list of the playlist's tracks
         elif extract_playlist_id(uri):
             service, playlist_uri = extract_playlist_id(uri)
+            service = self.string_to_service(service)
             logger.debug(f"browse {service} playlist {playlist_uri}")
-            service_method = getattr(self, service, None)
 
             # deal with things that are flagged as lists of lists
             # (eg, playlists or albums) not lists of tracks
@@ -337,11 +283,11 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             if listoflists_match:
                 return get_refs(
                     "playlists",
-                    [{"service_uri": service}],
+                    [service],
                     listoflists=[listoflists_match["listoflists"]],
                 )
 
-            tracks = service_method.get_playlist_tracks(playlist_uri)
+            tracks = service.get_playlist_tracks(playlist_uri)
             good_tracks = []
             good_albums = []
             trackrefs = []

@@ -8,6 +8,10 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Tidal(ServiceClient):
+
+    service_uri = "tidal"
+    service_name = "Tidal"
+
     def _get_tidal_soup(self, url):
         page = self.session.get(url)
         fixed_page = page.text.replace(" */", " */ \n")

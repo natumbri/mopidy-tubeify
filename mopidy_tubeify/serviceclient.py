@@ -4,6 +4,10 @@ from mopidy_tubeify import logger
 
 
 class ServiceClient(Client):
+    def __init__(self, proxy, headers, ytm_client):
+        super().__init__(proxy, headers)
+        self.ytmusic = ytm_client
+
     def get_users_details(self, users):
         logger.warn(f"no details, get_users_details: {users}")
         return []

@@ -16,6 +16,9 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Apple(ServiceClient):
+    service_uri = "applemusic"
+    service_name = "Apple Music"
+
     def get_applemusic_headers(self, endpoint=r"https://music.apple.com"):
         # Getting the access token first to send it with the header to the api endpoint
         # page = self.session.get(endpoint)

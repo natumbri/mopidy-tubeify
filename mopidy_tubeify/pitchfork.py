@@ -15,6 +15,10 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class Pitchfork(ServiceClient):
+
+    service_uri = "pitchfork"
+    service_name = "Pitchfork"
+
     def get_playlists_details(self, playlists):
         match_LAG = re.match(r"^LAG\-(?P<ListAndGuidePage>.+)$", playlists[0])
         if match_LAG:
