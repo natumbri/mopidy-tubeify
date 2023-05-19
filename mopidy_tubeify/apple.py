@@ -21,9 +21,12 @@ class Apple(ServiceClient):
 
     def get_applemusic_headers(self, endpoint=r"https://music.apple.com"):
         # Getting the access token first to send it with the header to the api endpoint
-        # page = self.session.get(endpoint)
-        # soup = bs(page.content.decode('utf-8'), "html.parser")
+        page = self.session.get(f"{endpoint}/browse")
+        soup = bs(page.content.decode('utf-8'), "html.parser")
         # logger.debug(f"get_applemusic_headers base url: {endpoint}")
+        js = soup.find("script", attrs={"type":"module"})
+        page = self.session.get(f"{endpoint}/{js['src']}")
+        access_token_text = re.search(r'const df=\"([^\"]*)\"', page.text).group(1)
 
         # access_token_tag = soup.find(
         #     "meta", {"name": "desktop-music-app/config/environment"}
@@ -34,7 +37,7 @@ class Apple(ServiceClient):
         # found in one of the js loaded in the head of music.apple.com
         # <script crossorigin="" src="/assets/index.84424de2.js" type="module"></script>
         # does it change from time to time?
-        access_token_text = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNjY4ODAwNDE0LCJleHAiOjE2NzYwNTgwMTQsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.lU7UBXnRH7LGMnCu2q9x99yBTE0OAHRtzA1h31eyrzlOl8W-1JDxnk74GnRoXxmnRpyYebGCNtt3bphRHQ-mEg"
+        # access_token_text = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNjg0MjUyNDc2LCJleHAiOjE2OTE1MTAwNzYsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.wB2ohAu70F2D7I5upABXSzYtyz6hjiTI1hw_gO4HPpEX07Cx8KfzxmQCkbsXjD8ZooiupQ3XVsctauM8pn1DQg"
 
         self.session.headers.update(
             {

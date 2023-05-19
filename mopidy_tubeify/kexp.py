@@ -32,7 +32,6 @@ class KEXP(ServiceClient):
                 dj_stats_categories = dj_stats_soup.find(
                     "ul", attrs={"id": "chart-list"}
                 ).find_all("a")
-
                 dj_results = []
 
                 [
