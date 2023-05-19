@@ -12,7 +12,6 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class KEXP(ServiceClient):
-
     service_uri = "kexp"
     service_name = "KEXP 90.3FM"
 
@@ -70,7 +69,6 @@ class KEXP(ServiceClient):
         return list(flatten(results))
 
     def get_playlist_tracks(self, playlist):
-
         endpoint = f"http://www.kexplorer.com{playlist}"
         stats_playlist_response = self.session.get(endpoint)
         stats_playlist_soup = bs(
@@ -78,7 +76,6 @@ class KEXP(ServiceClient):
         ).find_all("div", attrs={"class": "home-playlist-song"})
 
         if re.match(r"^\/top\/songs\/.+$", playlist):
-
             tracks = [
                 {
                     "song_name": track.find(
@@ -96,7 +93,6 @@ class KEXP(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
         if re.match(r"^\/top\/albums\/.+$", playlist):
-
             albums = [
                 (
                     album.find(
@@ -116,7 +112,6 @@ class KEXP(ServiceClient):
             return list(flatten(albums_to_return))
 
     def get_service_homepage(self):
-
         endpoint = r"http://www.kexplorer.com/djs/"
         djs = []
         for n in [1, 2, 3, 4]:

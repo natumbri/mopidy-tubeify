@@ -13,12 +13,10 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Spotify(ServiceClient):
-
     service_uri = "spotify"
     service_name = "Spotify"
 
     def get_spotify_headers(self, endpoint=r"https://open.spotify.com/"):
-
         # # Getting the access token first to send it with the header to the api endpoint
 
         # use temporary token from website
@@ -110,7 +108,6 @@ class Spotify(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         self.get_spotify_headers()
         endpoint = r"https://api.spotify.com/v1/views/desktop-home"
 

@@ -98,7 +98,6 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
                     album_name_word not in ["", "a", "the", "of", "and"]
                     and album_name_word in lower_result_name
                 ):
-
                     if lower_album_artists[0] in ["unknown", "various artists"]:
                         return [album_result]
 
@@ -313,7 +312,6 @@ def _do_search_and_match(
             )
 
         else:
-
             # is this a good idea?
             logger.warn(
                 f"Couldn't find the song on YouTube Music: {song_title}, trying videos"

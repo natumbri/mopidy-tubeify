@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class Extension(ext.Extension):
-
     dist_name = "Mopidy-Tubeify"
     ext_name = "tubeify"
     version = __version__

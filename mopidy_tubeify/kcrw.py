@@ -11,7 +11,6 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class KCRW(ServiceClient):
-
     service_uri = "kcrw"
     service_name = "KCRW 89.9FM"
 
@@ -63,7 +62,6 @@ class KCRW(ServiceClient):
         return list(flatten(results))
 
     def get_playlist_tracks(self, playlist):
-
         endpoint = f"https://www.kcrw.com{playlist}"
         episode_playlist_response = self.session.get(endpoint)
         episode_playlist_soup = bs(
@@ -89,7 +87,6 @@ class KCRW(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         endpoint = r"https://www.kcrw.com/shows"
         data = self.session.get(endpoint)
         soup = bs(data.content.decode("utf-8"), "html5lib")

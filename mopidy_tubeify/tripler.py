@@ -10,7 +10,6 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class TripleR(ServiceClient):
-
     service_uri = "tripler"
     service_name = "3RRR 102.7FM"
 
@@ -24,7 +23,6 @@ class TripleR(ServiceClient):
 
     def get_playlists_details(self, playlists):
         def job(playlist):
-
             # deal with program pages
             match_PROGRAM = re.match(r"^PROGRAM\-(?P<programId>.+)$", playlist)
             if match_PROGRAM:
@@ -65,7 +63,6 @@ class TripleR(ServiceClient):
         return list(flatten(results))
 
     def get_playlist_tracks(self, playlist):
-
         # deal with program pages
         if re.match(r"^PROGRAM\-(?P<programId>.+)$", playlist):
             return self.get_playlists_details([playlist])
@@ -100,7 +97,6 @@ class TripleR(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         endpoint = "https://www.rrr.org.au/explore/programs"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")

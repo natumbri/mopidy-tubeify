@@ -154,7 +154,6 @@ class Amrap(ServiceClient):
         return list(flatten(results))
 
     def get_playlist_tracks(self, playlist):
-
         match_EPISODE = re.match(
             r"^(?P<station>[^\.]+)\.radiopages\.info\/(?P<program>.+)\;(?P<episode>.+)$",
             playlist,
@@ -222,7 +221,6 @@ class Amrap(ServiceClient):
         return search_and_get_best_match(track_dicts, self.ytmusic)
 
     def get_service_homepage(self):
-
         base_url = f"https://{self.stationId}.radiopages.info/"
         position_url = f"https://airnet.org.au/program/position.js.php?url={base_url}&referrer=https%3A//airnet.org.au"
 

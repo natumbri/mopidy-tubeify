@@ -12,11 +12,13 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class AllMusic(ServiceClient):
-
     service_uri = "allmusic"
     service_name = "AllMusic"
 
     def get_playlists_details(self, playlists):
+        if playlists == []:
+            return []
+
         if playlists[0] == "genres":
             endpoint = f"https://www.allmusic.com/{playlists[0]}"
             genre_block_re = re.compile(r"^genre\s(left|middle|right)$")
@@ -101,7 +103,6 @@ class AllMusic(ServiceClient):
             )
 
     def get_playlist_tracks(self, playlist):
-
         page_albums_filter = []
 
         # deal with featured new releases pages
@@ -183,7 +184,6 @@ class AllMusic(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         endpoint = r"https://www.allmusic.com/newreleases"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")

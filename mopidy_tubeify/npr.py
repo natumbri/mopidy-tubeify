@@ -12,12 +12,10 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class NPR(ServiceClient):
-
     service_uri = "npr"
     service_name = "NPR"
 
     def get_playlists_details(self, playlists):
-
         # is this really a list of playlists, or is it a special case?
         if len(playlists) == 1:
             # did we get here from the homepage?
@@ -48,7 +46,6 @@ class NPR(ServiceClient):
         return
 
     def get_playlist_tracks(self, playlist):
-
         # is this a segment from BAOx? (Albums)
         match_BAOx = re.match(r"^BAOx\-(?P<segment>.+)$", playlist)
         if match_BAOx:
@@ -77,7 +74,6 @@ class NPR(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         # future: programatically generate album and song lists from
         # somewhere to include in the library.  The "id" would ideally
         # be something like f"listoflists-{url of first page of the list}"

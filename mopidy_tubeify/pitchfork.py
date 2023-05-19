@@ -15,7 +15,6 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class Pitchfork(ServiceClient):
-
     service_uri = "pitchfork"
     service_name = "Pitchfork"
 
@@ -79,7 +78,6 @@ class Pitchfork(ServiceClient):
             )
 
     def get_playlist_tracks(self, playlist):
-
         # deal with album review pages
         # if re.match(r"^ARP\-(?P<albumId>.+)$", playlist):
         #     return self.get_playlists_details([playlist])
@@ -420,7 +418,6 @@ class Pitchfork(ServiceClient):
         return tracks
 
     def get_service_homepage(self):
-
         track_dicts = []
 
         track_dicts.append(

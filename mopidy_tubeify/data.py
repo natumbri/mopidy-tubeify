@@ -1,9 +1,9 @@
 import re
 
 uri_playlist_regex = re.compile(
-    "^tubeify:(?P<service>.+)_playlist:(?P<playlistid>.+)$"
+    "^tubeify:(?P<service>.+):playlist_(?P<playlistid>.+)$"
 )
-uri_user_regex = re.compile("^tubeify:(?P<service>.+)_user:(?P<userid>.+)$")
+uri_user_regex = re.compile("^tubeify:(?P<service>.+):user_(?P<userid>.+)$")
 
 
 def extract_playlist_id(uri) -> str:

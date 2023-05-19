@@ -15,15 +15,12 @@ from mopidy_tubeify.yt_matcher import (
 
 
 class RollingStone(ServiceClient):
-
     service_uri = "rollingstone"
     service_name = "Rolling Stone Magazine"
 
     def get_playlists_details(self, playlists):
-
         # is this really a list of playlists, or is it a special case?
         if len(playlists) == 1:
-
             # did we get here from the homepage?
             if playlists[0] == "RS500BSOAT":
                 endpoint = r"https://www.rollingstone.com/music/music-lists/best-songs-of-all-time-1224767/"
@@ -60,7 +57,6 @@ class RollingStone(ServiceClient):
         return
 
     def get_playlist_tracks(self, playlist):
-
         # is this a segment from xAOAT?
         match_xAOAT = re.match(r"^[A-Z]{1,2}AOAT\-(?P<segment>.+)$", playlist)
         if match_xAOAT:
@@ -122,7 +118,6 @@ class RollingStone(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         # future: programatically generate album and song lists from the
         # RS lists page (https://www.rollingstone.com/music/music-lists/)
         # to include in the library.  The "id" would ideally be something

@@ -8,7 +8,6 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Tidal(ServiceClient):
-
     service_uri = "tidal"
     service_name = "Tidal"
 
@@ -111,7 +110,6 @@ class Tidal(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         # playlists are the <a> tags, with a href that includes
         # '/browse/playlist/[playlistid]' and text that is the name of the playlist.
         #   <a class="text-dec-none visible-offset-0 block ellipsis color-grey-lightest hover-desktop margin-bottom-0"

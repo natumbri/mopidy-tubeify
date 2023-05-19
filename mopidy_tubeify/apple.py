@@ -180,7 +180,6 @@ class Apple(ServiceClient):
         content_tracks = data["data"][0]["relationships"]["tracks"]["data"]
 
         for index, track in enumerate(content_tracks):
-
             song_name = track["attributes"]["name"]
             song_artists = [track["attributes"]["artistName"]]
             song_duration = track["attributes"]["durationInMillis"] // 1000
@@ -198,7 +197,6 @@ class Apple(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-
         # # it is possible to get editorial data using the apple music api
         # # but there is quite a lot to work through
         # self.get_applemusic_headers()

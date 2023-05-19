@@ -9,37 +9,66 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 
 
 class Discogs(ServiceClient):
-
     service_uri = "discogs"
     service_name = "Discogs"
 
     def get_playlist_tracks(self, playlist):
-        # deal with what to listen to pages
-        match_WTLT = re.match(r"^WTLT\-(?P<wtltpage>.+)$", playlist)
-        if match_WTLT:
-            logger.debug(f'matched "what to listen to page:" {playlist}')
-            playlist = match_WTLT["wtltpage"]
-            endpoint = f"https://www.discogs.com/digs/music/{playlist}"
+        filtered_items = None
+        match_DGP = re.match(r"^DGP\-(?P<dgppage>.+)$", playlist)
+
+        # deal with discogs pages
+        if match_DGP:
+            logger.debug(f'matched "best selling records page:" {playlist}')
+            playlist = match_DGP["dgppage"]
+            endpoint = f"https://www.discogs.com/digs/{playlist}"
+
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
-            new_releases_filter = soup.find_all(
-                "div", class_=re.compile(r".*release-item.*")
-            )
 
+            filtered_items = soup.find_all("div", class_="release-block-text")
+
+            # deal with pages where there is a table
+            album_tables = soup.find_all("table")
+            if album_tables:
+                album_table = album_tables[-1]
+                result = []
+                keys = [i.text for i in album_table.thead.tr.find_all("th")]
+
+                for table_row in album_table.tbody.find_all("tr"):
+                    vals = [i.text for i in table_row.find_all("td")]
+                    result.append(dict(zip(keys, vals)))
+
+                if len(result) > len(filtered_items):
+                    albums = [
+                        (
+                            item.get(
+                                "Artist(s)",
+                                item.get("Artist", "Unknown Artist"),
+                            ),
+                            item.get("Title", item.get("Release", "Unknown")),
+                        )
+                        for item in result
+                    ]
+                    albums_to_return = search_and_get_best_albums(
+                        albums, self.ytmusic
+                    )
+                    return list(flatten(albums_to_return))
+
+        if filtered_items:
             albums = [
                 (
-                    new_release.find(
+                    item.find(
                         "div",
                         class_=re.compile(r".*release(?:-block)?-artist.*"),
                     )
                     .text.strip()
                     .split(" / "),
-                    new_release.find(
+                    item.find(
                         "div",
                         class_=re.compile(r".*release(?:-block)?-title.*"),
                     ).text.strip(),
                 )
-                for new_release in new_releases_filter
+                for item in filtered_items
             ]
 
             albums_to_return = search_and_get_best_albums(
@@ -52,47 +81,43 @@ class Discogs(ServiceClient):
         return
 
     def get_service_homepage(self):
+        endpoint = r"https://content.discogs.com/digs/wp-admin/admin-ajax.php"
+        divs = []
+        i = 1
+        while len(divs) < 25:
+            data = self.session.post(
+                endpoint,
+                data={
+                    "action": "ultp_next_prev",
+                    "paged": i,
+                    "blockId": "af59cd",
+                    "postId": 31133,
+                    "blockName": "ultimate-post_post-grid-1",
+                    "filterValue": None,
+                    "filterType": None,
+                    "widgetBlockId": None,
+                    "wpnonce": None,  # "28f7cb40e4"
+                },
+            ).text
 
-        endpoint = r"https://www.discogs.com/digs/music/"
-        data = self.session.get(endpoint)
-        soup = bs(data.text, "html5lib")
-        if_you_like_divs = soup.find_all(
-            "li", attrs={"class": re.compile(".*tag-if-you-like.*")}
-        )
+            soup = bs(data, "html5lib")
+            divs += soup.find_all("div", attrs={"class": "ultp-block-content"})
+            i += 1
 
-        if_you_like_dicts = [
-            {"title": div.h3.a.text, "href": div.h3.a["href"]}
-            for div in if_you_like_divs
+        page_divs = []
+        for div in divs:
+            page_divs.extend(div.find_all("a"))
+
+        page_dicts = [
+            {"title": div.text, "href": div["href"]} for div in page_divs if div
         ]
 
-        if_you_like_results = [
+        page_results = [
             {
-                "name": f"{if_you_like_dict['title']}",
-                "id": f"WTLT-{if_you_like_dict['href'][31:]}",
+                "name": f"{page_dict['title']}",
+                "id": f"DGP-{page_dict['href'].split(r'/')[-3]}/{page_dict['href'].split(r'/')[-2]}",
             }
-            for if_you_like_dict in if_you_like_dicts
+            for page_dict in page_dicts
         ]
 
-        of_all_time_divs = soup.find_all(
-            "li", attrs={"class": re.compile(".*category-music.*")}
-        )
-        of_all_time_divs[:] = [
-            of_all_time_div
-            for of_all_time_div in of_all_time_divs
-            if re.match(".*of All Time$", of_all_time_div.text.strip())
-        ]
-
-        of_all_time_dicts = [
-            {"title": div.text.strip(), "href": div.a["href"]}
-            for div in of_all_time_divs
-        ]
-
-        of_all_time_results = [
-            {
-                "name": f"{of_all_time_dict['title']}",
-                "id": f"WTLT-{of_all_time_dict['href'][31:]}",
-            }
-            for of_all_time_dict in of_all_time_dicts
-        ]
-
-        return if_you_like_results + of_all_time_results
+        return page_results
