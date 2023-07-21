@@ -18,7 +18,7 @@ class Discogs(ServiceClient):
 
         # deal with discogs pages
         if match_DGP:
-            logger.debug(f'matched "best selling records page:" {playlist}')
+            logger.debug(f'matched "discogs page:" {playlist}')
             playlist = match_DGP["dgppage"]
             endpoint = f"https://www.discogs.com/digs/{playlist}"
 
@@ -96,7 +96,7 @@ class Discogs(ServiceClient):
                     "filterValue": None,
                     "filterType": None,
                     "widgetBlockId": None,
-                    "wpnonce": None,  # "28f7cb40e4"
+                    "wpnonce": None,
                 },
             ).text
 

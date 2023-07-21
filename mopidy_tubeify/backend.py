@@ -15,6 +15,8 @@ from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.discogs import Discogs
 from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
+from mopidy_tubeify.lastfm import Lastfm
+from mopidy_tubeify.musicreviewworld import MusicReviewWorld
 from mopidy_tubeify.nme import NME
 from mopidy_tubeify.npr import NPR
 from mopidy_tubeify.pitchfork import Pitchfork
@@ -31,6 +33,9 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.library = TubeifyLibraryProvider(backend=self)
         self.applemusic_playlists = config["tubeify"]["applemusic_playlists"]
         self.applemusic_users = config["tubeify"]["applemusic_users"]
+        self.lastfm_users = config["tubeify"]["lastfm_users"]
+        self.lastfm_username = config["tubeify"]["lastfm_username"]
+        self.lastfm_password = config["tubeify"]["lastfm_password"]
         self.spotify_users = config["tubeify"]["spotify_users"]
         self.spotify_playlists = config["tubeify"]["spotify_playlists"]
         self.tidal_playlists = config["tubeify"]["tidal_playlists"]
@@ -57,6 +62,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             Discogs,
             KCRW,
             KEXP,
+            MusicReviewWorld,
             NME,
             NPR,
             Pitchfork,
@@ -69,6 +75,27 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             service.service_uri: service(proxy, headers, self.ytmusic)
             for service in standard_services
         }
+
+        authenticated_services = [Lastfm]
+
+        [
+            self.services.update(
+                {
+                    service.service_uri: service(
+                        proxy,
+                        headers,
+                        self.ytmusic,
+                        self.config["tubeify"][
+                            f"{service.service_uri}_username"
+                        ],
+                        self.config["tubeify"][
+                            f"{service.service_uri}_password"
+                        ],
+                    )
+                }
+            )
+            for service in authenticated_services
+        ]
 
         if self.tidal_playlists:
             self.services[Tidal.service_uri] = Tidal(
@@ -140,7 +167,6 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                 if listoflists:
                     items = get_details_method(listoflists)
 
-                logger.info(items)
                 # need to fix this, too; listoflists reset to None
                 # for each service in the list of selected services
                 listoflists = None

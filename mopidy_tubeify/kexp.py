@@ -73,7 +73,6 @@ class KEXP(ServiceClient):
         stats_playlist_soup = bs(
             stats_playlist_response.content.decode("utf-8"), "html5lib"
         ).find_all("div", attrs={"class": "home-playlist-song"})
-
         if re.match(r"^\/top\/songs\/.+$", playlist):
             tracks = [
                 {

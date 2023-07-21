@@ -22,11 +22,13 @@ class Apple(ServiceClient):
     def get_applemusic_headers(self, endpoint=r"https://music.apple.com"):
         # Getting the access token first to send it with the header to the api endpoint
         page = self.session.get(f"{endpoint}/browse")
-        soup = bs(page.content.decode('utf-8'), "html.parser")
+        soup = bs(page.content.decode("utf-8"), "html.parser")
         # logger.debug(f"get_applemusic_headers base url: {endpoint}")
-        js = soup.find("script", attrs={"type":"module"})
+        js = soup.find("script", attrs={"type": "module"})
         page = self.session.get(f"{endpoint}/{js['src']}")
-        access_token_text = re.search(r'const df=\"([^\"]*)\"', page.text).group(1)
+        access_token_text = re.search(
+            r"const df=\"([^\"]*)\"", page.text
+        ).group(1)
 
         # access_token_tag = soup.find(
         #     "meta", {"name": "desktop-music-app/config/environment"}

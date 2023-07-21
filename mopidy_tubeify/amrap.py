@@ -36,9 +36,11 @@ class Amrap(ServiceClient):
             program_details_response.content.decode("unicode-escape"),
             "html5lib",
         )
-        program_details_script = program_details_soup.find(
-            "div", class_="static"
-        ).script.contents[0]
+        program_details_script = (
+            program_details_soup.find("div", class_="static")
+            .find("script", attrs={"type": "text/javascript"})
+            .contents[0]
+        )
         program_details = {
             "owner": False,
             "csrfToken": re.search(
