@@ -27,16 +27,16 @@ class Lastfm(ServiceClient):
         # "get_tagged_artists":{"limit":20},
         # "get_tagged_tracks":{"limit":20},
         "get_top_albums": {
-            "name": "top albums",
+            "name": "top albums this month",
             "params": {"limit": 20, "period": "PERIOD_1MONTH"},
         },
         "get_top_artists": {
-            "name": "top artists",
+            "name": "top artists this month",
             "params": {"limit": 20, "period": "PERIOD_1MONTH"},
         },
-        "get_top_tags": {"name": "top tags", "params": {"limit": 20}},
+        # "get_top_tags": {"name": "top tags", "params": {"limit": 20}},
         "get_top_tracks": {
-            "name": "top tracks",
+            "name": "top tracks this month",
             "params": {"limit": 20, "period": "PERIOD_1MONTH"},
         },
     }
@@ -74,10 +74,6 @@ class Lastfm(ServiceClient):
             for playlist in self.playlist_kinds
         ]
 
-    def get_playlists_details(self, playlists):
-        logger.warn(f"no details, get_playlists_details: {playlists}")
-        return []
-
     def get_playlist_tracks(self, playlist):
         match = re.match(r"^(?P<kind>.+):(?P<user>.+)$", playlist)
 
@@ -97,7 +93,7 @@ class Lastfm(ServiceClient):
         for scrobbled_item in pylast_object:
             if type(scrobbled_item) == TopItem:
                 scrobbled_items.append(scrobbled_item.item)
-            if type(scrobbled_item) in [PlayedTrack, LovedTrack]:
+            elif type(scrobbled_item) in [PlayedTrack, LovedTrack]:
                 scrobbled_items.append(scrobbled_item.track)
 
         tracks = [
