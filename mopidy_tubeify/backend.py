@@ -11,6 +11,7 @@ from mopidy_tubeify import Extension, logger
 from mopidy_tubeify.allmusic import AllMusic
 from mopidy_tubeify.amrap import Amrap
 from mopidy_tubeify.apple import Apple
+from mopidy_tubeify.bestlivealbums import BestLiveAlbums
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.discogs import Discogs
 from mopidy_tubeify.kcrw import KCRW
@@ -59,6 +60,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         standard_services = [
             AllMusic,
             Apple,
+            BestLiveAlbums,
             Discogs,
             KCRW,
             KEXP,
@@ -291,7 +293,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
         elif extract_playlist_id(uri):
             service, playlist_uri = extract_playlist_id(uri)
             logger.debug(f"browse {service} playlist {playlist_uri}")
-
+            print(f"browse {service} playlist {playlist_uri}")
             # deal with things that are flagged as lists of lists
             # (eg, playlists or albums) not lists of tracks
             listoflists_match = re.match(

@@ -1,15 +1,16 @@
 import re
-from mopidy_tubeify.serviceclient import ServiceClient
+
 import pylast
+from mopidy_scrobbler.frontend import API_KEY, API_SECRET, PYLAST_ERRORS
 from pylast import Album, LovedTrack, PlayedTrack, TopItem, Track
+
+from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
+from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import (
     search_and_get_best_albums,
     search_and_get_best_match,
 )
-
-from mopidy_tubeify import logger
-from mopidy_scrobbler.frontend import API_KEY, API_SECRET, PYLAST_ERRORS
 
 
 class Lastfm(ServiceClient):

@@ -2,7 +2,8 @@
 # https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/yt_provider.py
 # https://github.com/spotDL/spotify-downloader/blob/v3/spotdl/providers/provider_utils.py
 
-import re, string
+import re
+import string
 from concurrent.futures.thread import ThreadPoolExecutor
 
 # ! Just for static typing
