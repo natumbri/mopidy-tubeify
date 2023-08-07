@@ -1,4 +1,5 @@
 import re
+import json
 
 from bs4 import BeautifulSoup as bs
 
@@ -10,7 +11,7 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 
 class BestLiveAlbums(ServiceClient):
     service_uri = "bestlivealbums"
-    service_name = "Best Live & Studio Albums"
+    service_name = "Best Live & Studio Albums Website"
     service_endpoint = "http://www.bestlivealbums.com"
 
     def get_playlists_details(self, playlists):
@@ -41,27 +42,47 @@ class BestLiveAlbums(ServiceClient):
 
             return genres + artists
 
+        if playlists == ["/lists-of-best-live-albums/"]:
+            endpoint = f"{self.service_endpoint}{playlists[0]}"
+            data = self.session.get(endpoint)
+            soup = (
+                bs(data.content.decode("utf-8"), "html5lib")
+                .find("div", attrs={"class": "entry-content"})
+                .find_all("ol")
+            )
+
+            return [
+                {
+                    "name": ordered_list.findPrevious("strong").text,
+                    "id": f"list-{json.dumps(str(ordered_list))}",
+                }
+                for ordered_list in soup
+            ]
+
         logger.warn(f"no details, get_playlists_details: {playlists}")
         return []
 
     def get_playlist_tracks(self, playlist):
-        match = re.match(
-            r"^(?P<kind>(artist|genre))\-(?P<link>/.*best\-.*/$)", playlist
-        )
-        if match:
+        if re.match(r"^list-.*$", playlist):
+            soup = [
+                li
+                for li in bs(playlist[6:-1], "html5lib").find_all("li")
+                if li.find("a")
+            ]
+            match = {"kind": "list"}
+
+        else:
+            match = re.match(
+                r"^(?P<kind>(artist|genre))\-(?P<link>/.*best\-.*/$)", playlist
+            )
+
+        if match["kind"] in ["artist", "genre"]:
             endpoint = f"{self.service_endpoint}{match['link']}"
             data = self.session.get(endpoint)
             soup = bs(data.content.decode("utf-8"), "html5lib")
             poll = soup.find("input", attrs={"name": "poll_id"})["value"]
             nonce = soup.find("input", attrs={"name": "wp-polls-nonce"})
-            if match["kind"] == "artist":
-                artist = (
-                    soup.find("span", attrs={"class": "tags-links"})
-                    .text.split("Live Albums")[0]
-                    .replace("Tags", "")
-                    .strip()
-                )
-
+            artists = [soup.find("span", attrs={"class": "tags-links"})]
             endpoint = f"{self.service_endpoint}/wp-admin/admin-ajax.php"
 
             data = {
@@ -92,34 +113,64 @@ class BestLiveAlbums(ServiceClient):
             )
             results = self.session.post(endpoint, data)
 
-            soup = bs(results.content.decode("utf-8"), "html5lib").find_all(
-                "li"
-            )
+            soup = [
+                li
+                for li in bs(
+                    results.content.decode("utf-8"), "html5lib"
+                ).find_all("li")
+                if li.find("a")
+            ]
 
             if match["kind"] == "artist":
-                albums = [
-                    (
-                        [artist],
-                        li.find("a").text,
-                    )
-                    for li in soup
-                    if li.find("a")
-                ]
-
+                artists = [
+                    artists[0]
+                    .text.split("Live Albums")[0]
+                    .replace("Tags", "")
+                    .strip()
+                ] * len(soup)
             else:
-                albums = [
-                    (
-                        [li.text.split(li.find("a").text)[0].strip()],
-                        li.find("a").text,
-                    )
-                    for li in soup
-                    if li.find("a")
+                artists = [
+                    li.text.split(li.find("a").text)[0].strip() for li in soup
                 ]
 
-            albums_to_return = search_and_get_best_albums(
-                [album for album in albums if album[1]], self.ytmusic
-            )
+            album_names = [li.find("a").text for li in soup]
 
+            albums = [
+                (
+                    [artist],
+                    album_name,
+                )
+                for artist, album_name in zip(artists, album_names)
+            ]
+
+        elif match["kind"] == "list":
+            albums = [
+                (
+                    [li.text.split(" by ")[1].strip()],
+                    li.text.split(" by ")[0].strip(),
+                )
+                for li in soup
+                if " by " in li.text
+            ]
+
+            alt_albums = [
+                li.text.replace(" at ", "\\u00a0\\u00a0 \\u00a0").split(
+                    "\\u00a0\\u00a0 \\u00a0"
+                )
+                for li in soup
+            ]
+
+            albums += [
+                (alt_album[0], alt_album[1])
+                for alt_album in alt_albums
+                if len(alt_album) == 2
+            ]
+
+        albums_to_return = search_and_get_best_albums(
+            [album for album in albums if album[1]], self.ytmusic
+        )
+
+        if albums_to_return:
             return list(flatten(albums_to_return))
 
         logger.warn(f"no tracks, get_playlist_tracks: {playlist}")
