@@ -90,7 +90,7 @@ class Spotify(ServiceClient):
 
     def get_playlist_tracks(self, playlist):
         endpoint = f"https://api.spotify.com/v1/playlists/{playlist}"
-        self.get_spotify_headers()
+        Spotify.get_spotify_headers(self)
         data = self.session.get(endpoint).json()
         items = data["tracks"]["items"]
         tracks = [

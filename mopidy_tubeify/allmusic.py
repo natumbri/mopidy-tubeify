@@ -14,34 +14,35 @@ from mopidy_tubeify.yt_matcher import (
 class AllMusic(ServiceClient):
     service_uri = "allmusic"
     service_name = "AllMusic"
+    service_endpoint = "https://www.allmusic.com/"
 
     def get_playlists_details(self, playlists):
         if playlists == []:
             return []
 
         if playlists[0] == "genres":
-            endpoint = f"https://www.allmusic.com/{playlists[0]}"
+            endpoint = f"{self.service_endpoint}{playlists[0]}"
             genre_block_re = re.compile(r"^genre\s(left|middle|right)$")
             data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib").find("div", id="cmn_wrap")
-            genres = soup.find_all("div", attrs={"class": genre_block_re})
-
+            soup = bs(data.text, "html5lib").find("div", id="allGenresGrid")
+            genres = soup.find_all("div", attrs={"class": "gridItem"})
+            metas = [
+                genre.find("div", attrs={"class": "meta"}) for genre in genres
+            ]
             return [
                 {
-                    "name": genre.h2.text,
-                    "id": f"listoflists-genre-{genre.a['href']}",
+                    "name": meta.a.text,
+                    "id": f"listoflists-genre-{meta.a['href']}",
                 }
-                for genre in genres
+                for meta in metas
             ]
 
         elif playlists[0] == "editorschoice":
-            endpoint = f"https://www.allmusic.com/{playlists[0]}"
+            endpoint = f"{self.service_endpoint}newreleases/{playlists[0]}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
-
             year_filter = soup.find("select", {"name": "year-filter"})
             years = year_filter.find_all("option")
-
             return sorted(
                 [
                     {
@@ -55,7 +56,7 @@ class AllMusic(ServiceClient):
             )
 
         elif re.match(r"^EC\-(?P<year>\d{4})$", playlists[0]):
-            endpoint = r"https://www.allmusic.com/editorschoice"
+            endpoint = f"{self.service_endpoint}newreleases/editorschoice"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
 
@@ -66,15 +67,30 @@ class AllMusic(ServiceClient):
             return [
                 {
                     "name": month.text.strip(),
-                    "id": f"ECMY-https://www.allmusic.com/newreleases/editorschoice/{month.text.strip().lower()}-{year}",
+                    "id": f"ECMY-{self.service_endpoint}newreleases/editorschoice/{month.text.strip().lower()}-{year}",
                 }
                 for month in months
             ]
 
         elif re.match(r"^genre\-(?P<genreURL>.+)$", playlists[0]):
-            endpoint = playlists[0][6:]
+            endpoint = f"{self.service_endpoint}{playlists[0][7:]}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
+            if subgenre_soup := soup.find("div", class_="desktopOnly"):
+                subgenres = sorted(
+                    [
+                        {
+                            "name": link["title"],
+                            "id": f'listoflists-genre-{link["href"]}',
+                        }
+                        for link in subgenre_soup.find_all(
+                            "a", class_="genre-links"
+                        )
+                    ],
+                    key=lambda k: k["name"],
+                )
+            else:
+                subgenres = []
 
             return [
                 {
@@ -89,18 +105,7 @@ class AllMusic(ServiceClient):
                     "name": "Songs",
                     "id": f"songs-{endpoint}/songs",
                 },
-            ] + sorted(
-                [
-                    {
-                        "name": link["title"],
-                        "id": f'listoflists-genre-https://www.allmusic.com{link["href"]}',
-                    }
-                    for link in soup.find(
-                        "div", class_="desktop-only"
-                    ).find_all("a", class_="genre-links")
-                ],
-                key=lambda k: k["name"],
-            )
+            ] + subgenres
 
     def get_playlist_tracks(self, playlist):
         page_albums_filter = []
@@ -110,10 +115,10 @@ class AllMusic(ServiceClient):
         if match_FNR:
             logger.debug(f'matched "featured new release" {playlist}')
             playlist = match_FNR["FNRdate"]
-            endpoint = f"https://www.allmusic.com/newreleases/{playlist}"
+            endpoint = f"{self.service_endpoint}newreleases/{playlist}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
-            page_albums_filter = soup.find_all("div", class_="new-release")
+            page_albums_filter = soup.find_all("div", class_="newReleaseItem")
 
         match_ECMY = re.match(r"^ECMY\-(?P<albumsURL>.+)$", playlist)
         if match_ECMY:
@@ -122,7 +127,7 @@ class AllMusic(ServiceClient):
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             page_albums_filter = soup.find_all(
-                "div", class_="editors-choice-item"
+                "div", class_="editorsChoiceItem"
             )
 
         # deal with genre and style album pages
@@ -130,11 +135,21 @@ class AllMusic(ServiceClient):
         if match_albums:
             logger.debug(f'matched "genre albums page" {playlist}')
             endpoint = match_albums["albumsURL"]
+            print(endpoint)
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             page_albums_filter = soup.find(
-                "section", class_="album-highlights"
-            ).find_all("div", class_="album-highlight")
+                "div", id="descriptorAlbumHighlights"
+            ).find_all("div", class_="singleGenreAlbum")
+            # genre and style pages use spans and "descriptor" classes
+            # convert to divs
+            for page_album in page_albums_filter:
+                artist_tag = page_album.find("span", class_="descriptorArtist")
+                artist_tag.name = "div"
+                artist_tag["class"] = "artist"
+                title_tag = page_album.find("span", class_="descriptorTitle")
+                title_tag.name = "div"
+                title_tag["class"] = "title"
 
         if page_albums_filter:
             albums = [
@@ -158,23 +173,21 @@ class AllMusic(ServiceClient):
         if match_songs:
             logger.debug(f'matched "genre songs page" {playlist}')
             endpoint = match_songs["songsURL"]
+            print(endpoint)
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             page_tracks_filter = (
-                soup.find("section", class_="song-highlights")
-                .find("tbody")
-                .find_all("tr")
+                soup.find("div", id="descriptorSongHighlights")
+                .find("div", class_="descriptorSubGrid")
+                .find_all("div", class_="songRow")
             )
 
             tracks = [
                 {
-                    "song_name": track.find("td", class_="title").a.text,
-                    "song_artists": [
-                        performer.text
-                        for performer in track.find(
-                            "td", class_="performer"
-                        ).find_all("a")
-                    ],
+                    "song_name": track.find("span", class_="songTitle").a.text,
+                    "song_artists": track.find("div", class_="songRight")
+                    .text.strip()
+                    .split(" / "),
                     "song_duration": 0,
                     "isrc": None,
                 }
@@ -184,7 +197,7 @@ class AllMusic(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-        endpoint = r"https://www.allmusic.com/newreleases"
+        endpoint = f"{self.service_endpoint}newreleases"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 

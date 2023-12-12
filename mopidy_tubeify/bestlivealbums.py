@@ -63,87 +63,14 @@ class BestLiveAlbums(ServiceClient):
         return []
 
     def get_playlist_tracks(self, playlist):
+        # list- playlists include the album list items as json, to avoid
+        # another call to the page where the playlist was located
         if re.match(r"^list-.*$", playlist):
             soup = [
                 li
                 for li in bs(playlist[6:-1], "html5lib").find_all("li")
                 if li.find("a")
             ]
-            match = {"kind": "list"}
-
-        else:
-            match = re.match(
-                r"^(?P<kind>(artist|genre))\-(?P<link>/.*best\-.*/$)", playlist
-            )
-
-        if match["kind"] in ["artist", "genre"]:
-            endpoint = f"{self.service_endpoint}{match['link']}"
-            data = self.session.get(endpoint)
-            soup = bs(data.content.decode("utf-8"), "html5lib")
-            poll = soup.find("input", attrs={"name": "poll_id"})["value"]
-            nonce = soup.find("input", attrs={"name": "wp-polls-nonce"})
-            artists = [soup.find("span", attrs={"class": "tags-links"})]
-            endpoint = f"{self.service_endpoint}/wp-admin/admin-ajax.php"
-
-            data = {
-                "action": "polls",
-                "view": "result",
-                "poll_id": poll,
-                nonce["id"]: nonce["value"],
-            }
-
-            headers = self.session.headers
-            headers.update(
-                {
-                    # "Host": "www.bestlivealbums.com",
-                    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0",
-                    # "Accept": "*/*",
-                    # "Accept-Language": "en-US,en;q=0.5",
-                    # "Accept-Encoding": "gzip, deflate",
-                    # "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "X-Requested-With": "XMLHttpRequest",
-                    # "Content-Length": "60",
-                    # "Origin": "http://www.bestlivealbums.com",
-                    # "Connection": "keep-alive",
-                    # "Referer": "http://www.bestlivealbums.com/best-aor-live-album/",
-                    # "Cookie": "PHPSESSID=o3j7q2601kk3fta19tjs4fe8u4; 72120b8cae832756389e425d970d47b5=e607e5a5a816d0de37c7f0a4291d4121; ckon2308=sject2308_f2b66e763ec46; SJECT2308=CKON2308; JCS_INENREF=; JCS_INENTIM=1691235931116; _wpss_h_=1; _wpss_p_=N%3A5%20%7C%20WzFdW1BERiBWaWV3ZXJdIFsyXVtDaHJvbWUgUERGIFZpZXdlcl0gWzNdW0Nocm9taXVtIFBERiBWaWV3ZXJdIFs0XVtNaWNyb3NvZnQgRWRnZSBQREYgVmlld2VyXSBbNV1bV2ViS2l0IGJ1aWx0LWluIFBERl0g",
-                    # "Pragma": "no-cache",
-                    # "Cache-Control": "no-cache"
-                }
-            )
-            results = self.session.post(endpoint, data)
-
-            soup = [
-                li
-                for li in bs(
-                    results.content.decode("utf-8"), "html5lib"
-                ).find_all("li")
-                if li.find("a")
-            ]
-
-            if match["kind"] == "artist":
-                artists = [
-                    artists[0]
-                    .text.split("Live Albums")[0]
-                    .replace("Tags", "")
-                    .strip()
-                ] * len(soup)
-            else:
-                artists = [
-                    li.text.split(li.find("a").text)[0].strip() for li in soup
-                ]
-
-            album_names = [li.find("a").text for li in soup]
-
-            albums = [
-                (
-                    [artist],
-                    album_name,
-                )
-                for artist, album_name in zip(artists, album_names)
-            ]
-
-        elif match["kind"] == "list":
             albums = [
                 (
                     [li.text.split(" by ")[1].strip()],
@@ -165,6 +92,84 @@ class BestLiveAlbums(ServiceClient):
                 for alt_album in alt_albums
                 if len(alt_album) == 2
             ]
+
+        else:
+            # this re is currently set up for artist and genre
+            match = re.match(
+                r"^(?P<kind>(artist|genre))\-(?P<link>/.*best\-.*/$)", playlist
+            )
+
+            # artist and genre lists are similar to each other, except that
+            # on artist pages, you have to get the artist separately and
+            # then apply it to each item on the list
+            if match["kind"] in ["artist", "genre"]:
+                endpoint = f"{self.service_endpoint}{match['link']}"
+                data = self.session.get(endpoint)
+                soup = bs(data.content.decode("utf-8"), "html5lib")
+                poll = soup.find("input", attrs={"name": "poll_id"})["value"]
+                nonce = soup.find("input", attrs={"name": "wp-polls-nonce"})
+                album_artists = soup.find("span", attrs={"class": "tags-links"})
+                endpoint = f"{self.service_endpoint}/wp-admin/admin-ajax.php"
+
+                data = {
+                    "action": "polls",
+                    "view": "result",
+                    "poll_id": poll,
+                    nonce["id"]: nonce["value"],
+                }
+
+                headers = self.session.headers
+                headers.update(
+                    {
+                        # "Host": "www.bestlivealbums.com",
+                        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0",
+                        # "Accept": "*/*",
+                        # "Accept-Language": "en-US,en;q=0.5",
+                        # "Accept-Encoding": "gzip, deflate",
+                        # "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        "X-Requested-With": "XMLHttpRequest",
+                        # "Content-Length": "60",
+                        # "Origin": "http://www.bestlivealbums.com",
+                        # "Connection": "keep-alive",
+                        # "Referer": "http://www.bestlivealbums.com/best-aor-live-album/",
+                        # "Cookie": "PHPSESSID=o3j7q2601kk3fta19tjs4fe8u4; 72120b8cae832756389e425d970d47b5=e607e5a5a816d0de37c7f0a4291d4121; ckon2308=sject2308_f2b66e763ec46; SJECT2308=CKON2308; JCS_INENREF=; JCS_INENTIM=1691235931116; _wpss_h_=1; _wpss_p_=N%3A5%20%7C%20WzFdW1BERiBWaWV3ZXJdIFsyXVtDaHJvbWUgUERGIFZpZXdlcl0gWzNdW0Nocm9taXVtIFBERiBWaWV3ZXJdIFs0XVtNaWNyb3NvZnQgRWRnZSBQREYgVmlld2VyXSBbNV1bV2ViS2l0IGJ1aWx0LWluIFBERl0g",
+                        # "Pragma": "no-cache",
+                        # "Cache-Control": "no-cache"
+                    }
+                )
+                results = self.session.post(endpoint, data)
+
+                soup = [
+                    li
+                    for li in bs(
+                        results.content.decode("utf-8"), "html5lib"
+                    ).find_all("li")
+                    if li.find("a")
+                ]
+
+                album_names = [li.find("a").text for li in soup]
+
+                if match["kind"] == "artist":
+                    album_artists = [
+                        album_artists.text.split("Live Albums")[0]
+                        .replace("Tags", "")
+                        .strip()
+                    ] * len(soup)
+                else:
+                    album_artists = [
+                        li.text.split(album_name)[0].strip()
+                        for li, album_name in zip(soup, album_names)
+                    ]
+
+                albums = [
+                    (
+                        [album_artist],
+                        album_name,
+                    )
+                    for album_artist, album_name in zip(
+                        album_artists, album_names
+                    )
+                ]
 
         albums_to_return = search_and_get_best_albums(
             [album for album in albums if album[1]], self.ytmusic

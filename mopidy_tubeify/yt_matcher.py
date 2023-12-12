@@ -235,7 +235,8 @@ def _do_search_and_match(
     if isrc is not None:
         sorted_isrc_results = []
         try:
-            isrc_results = ytmusic.search(isrc, filter="songs", limit=2)
+            isrc_results = ytmusic.search(f'"{isrc}"')
+
             # make sure the isrc result is relevant
             sorted_isrc_results = _order_yt_results(
                 isrc_results, song_name, song_artists, song_title, song_duration
