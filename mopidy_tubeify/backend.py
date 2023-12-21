@@ -25,6 +25,7 @@ from mopidy_tubeify.rollingstone import RollingStone
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.tidal import Tidal
 from mopidy_tubeify.tripler import TripleR
+from mopidy_tubeify.whathifi import WhatHiFi
 
 
 class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
@@ -71,6 +72,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             RollingStone,
             Spotify,
             TripleR,
+            WhatHiFi,
         ]
 
         self.services = {
@@ -323,6 +325,24 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     and track["title"]
                 ]
 
+                # good_tracks.extend(
+                #     [
+                #         dict(
+                #             video,
+                #             **{
+                #                 "videoId": video["videoDetails"]["videoId"],
+                #                 "title": video["videoDetails"]["title"],
+                #             },
+                #         )
+                #         for video in tracks
+                #         if "videoDetails" in video
+                #         and "videoId" in video["videoDetails"]
+                #         and video["videoDetails"]["videoId"]
+                #         and "title" in video["videoDetails"]
+                #         and video["videoDetails"]["title"]
+                #     ]
+                # )
+
                 good_albums = [
                     album
                     for album in tracks
@@ -360,7 +380,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     uri=(
                         f"yt:video:{first_track['videoId']}"
                         f":preload:"
-                        f"{json.dumps([track for track in good_tracks if track is not None])}"
+                        f"{json.dumps([track for track in good_tracks if track is not None and len(track)>3])}"
                     ),
                     name=first_track["title"],
                 )

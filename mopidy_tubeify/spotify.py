@@ -15,6 +15,15 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 class Spotify(ServiceClient):
     service_uri = "spotify"
     service_name = "Spotify"
+    playlist_regex = re.compile(
+        r"https\:\/\/open\.spotify\.com\/.*\/?playlist\/(.{22})"
+    )
+    album_regex = re.compile(
+        r"https\:\/\/open\.spotify\.com\/embed\/album\/(.{22})"
+    )
+    track_regex = re.compile(
+        r"https\:\/\/open\.spotify\.com\/embed\/track\/(.{22})"
+    )
 
     def get_spotify_headers(self, endpoint=r"https://open.spotify.com/"):
         # # Getting the access token first to send it with the header to the api endpoint
@@ -73,25 +82,58 @@ class Spotify(ServiceClient):
             for playlist in playlists
         ]
 
+    def _get_spotify_details(self, kind, tracklist):
+        endpoint = f"https://api.spotify.com/v1/{kind}/{tracklist}"
+        data = self.session.get(endpoint).json()
+        return data
+
     def get_playlists_details(self, playlists):
-        self.get_spotify_headers()
+        Spotify.get_spotify_headers(self)
+        results = {
+            playlist: Spotify._get_spotify_details(self, "playlists", playlist)
+            for playlist in playlists
+        }
+        return [
+            {"name": details["name"], "id": playlist_id}
+            for playlist_id, details in results.items()
+            if details
+        ]
 
-        def job(playlist):
-            endpoint = f"https://api.spotify.com/v1/playlists/{playlist}"
-            data = self.session.get(endpoint).json()
-            if "name" in data:
-                playlist_name = data["name"]
-                return {"name": playlist_name, "id": playlist}
-            logger.error(f"{playlist}: {data}")
+    def get_albums_details(self, albums):
+        Spotify.get_spotify_headers(self)
+        results = {
+            album: Spotify._get_spotify_details(self, "albums", album)
+            for album in albums
+        }
+        return [
+            {
+                "name": details["name"],
+                "id": album_id,
+                "artists": [artist["name"] for artist in details["artists"]],
+            }
+            for album_id, details in results.items()
+            if details
+        ]
 
-        results = []
-        [results.append(job(playlist)) for playlist in playlists]
-        return [result for result in results if result]
+    def get_tracks_details(self, tracks):
+        Spotify.get_spotify_headers(self)
+        results = {
+            track: Spotify._get_spotify_details(self, "tracks", track)
+            for track in tracks
+        }
+        return [
+            {
+                "name": details["name"],
+                "id": track_id,
+                "artists": [artist["name"] for artist in details["artists"]],
+            }
+            for track_id, details in results.items()
+            if details
+        ]
 
     def get_playlist_tracks(self, playlist):
-        endpoint = f"https://api.spotify.com/v1/playlists/{playlist}"
         Spotify.get_spotify_headers(self)
-        data = self.session.get(endpoint).json()
+        data = Spotify._get_spotify_details(self, "playlists", playlist)
         items = data["tracks"]["items"]
         tracks = [
             {

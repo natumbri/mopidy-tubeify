@@ -101,9 +101,14 @@ class NPR(ServiceClient):
             for album in soup.find("div", attrs={"id": "storytext"}).find_all(
                 "li"
             ):
-                album_name = album.em.extract().text.strip()
-                album_artist = re.split("— |- |, ", album.text)[0].strip()
-                albums_list.append((album_artist, album_name))
+                try:
+                    album_name = album.em.extract().text.strip()
+                    album_artist = re.split("— |- |, ", album.text)[0].strip()
+                    albums_list.append((album_artist, album_name))
+                except Exception as e:
+                    logger.debug(
+                        f"error {e} with NMF album {str(album)} on {playlist}"
+                    )
 
             albums_to_return = search_and_get_best_albums(
                 albums_list, self.ytmusic

@@ -10,6 +10,9 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 class Tidal(ServiceClient):
     service_uri = "tidal"
     service_name = "Tidal"
+    playlist_regex = re.compile(
+        r"https\:\/\/tidal\.com\/browse\/playlist\/(.{8}-.{4}-.{4}-.{4}-.{12})"
+    )
 
     def _get_tidal_soup(self, url):
         page = self.session.get(url)
@@ -41,8 +44,8 @@ class Tidal(ServiceClient):
 
     def get_playlist_tracks(self, playlist):
         # get tracks for each playlist and translate to ytm
-        soup = self._get_tidal_soup(
-            f"https://tidal.com/browse/playlist/{playlist}"
+        soup = Tidal._get_tidal_soup(
+            self, f"https://tidal.com/browse/playlist/{playlist}"
         )
         tracks_soup = soup.find_all("div", class_="track-item has-info")
         track_dict = {}
@@ -66,7 +69,6 @@ class Tidal(ServiceClient):
                 "song_artists": song_artists,
                 "isrc": None,
             }
-
         track_script = soup.find("script", {"data-n-head": None}).text
 
         track_pattern = re.compile(
