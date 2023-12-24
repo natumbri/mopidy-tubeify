@@ -11,6 +11,8 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 class Discogs(ServiceClient):
     service_uri = "discogs"
     service_name = "Discogs"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Discogs_record_icon.svg/512px-Discogs_record_icon.svg.png"
+    service_endpoint = "https://www.discogs.com"
 
     def get_playlist_tracks(self, playlist):
         filtered_items = None
@@ -20,7 +22,7 @@ class Discogs(ServiceClient):
         if match_DGP:
             logger.debug(f'matched "discogs page:" {playlist}')
             playlist = match_DGP["dgppage"]
-            endpoint = f"https://www.discogs.com/digs/{playlist}"
+            endpoint = f"{self.service_endpoint}/digs/{playlist}"
 
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")

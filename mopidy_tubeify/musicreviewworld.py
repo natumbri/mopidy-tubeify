@@ -14,7 +14,8 @@ from mopidy_tubeify.yt_matcher import (
 class MusicReviewWorld(ServiceClient):
     service_uri = "musicreviewworld"
     service_name = "Music Review World"
-    service_endpoint = "https://musicreviewworld.com/"
+    service_endpoint = "https://musicreviewworld.com"
+    service_image = f"{service_endpoint}/wp-content/uploads/2022/05/Music-Review-World_Official-Logo.png"
 
     def get_playlists_details(self, playlists):
         logger.warn(f"no details, get_playlists_details: {playlists}")
@@ -26,7 +27,7 @@ class MusicReviewWorld(ServiceClient):
         if match_ARP:
             logger.debug(f'matched "album review page" {playlist}')
             reviewPage = match_ARP["reviewPage"]
-            endpoint = f"{self.service_endpoint}{reviewPage}"
+            endpoint = f"{self.service_endpoint}/{reviewPage}"
             data = self.session.get(endpoint)
             soup = (
                 bs(data.text, "html5lib")

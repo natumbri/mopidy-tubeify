@@ -6,6 +6,7 @@ from mopidy_tubeify import logger
 class ServiceClient(Client):
     service_uri = None
     service_name = None
+    service_image = None
     service_endpoint = None
 
     def __init__(self, proxy, headers, ytm_client):

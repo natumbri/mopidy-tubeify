@@ -17,13 +17,15 @@ from mopidy_tubeify.yt_matcher import (
 class Pitchfork(ServiceClient):
     service_uri = "pitchfork"
     service_name = "Pitchfork"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Pitchfork_logo_symbol.svg/480px-Pitchfork_logo_symbol.svg.png"
+    service_endpoint = "https://pitchfork.com"
 
     def get_playlists_details(self, playlists):
         match_LAG = re.match(r"^LAG\-(?P<ListAndGuidePage>.+)$", playlists[0])
         if match_LAG:
             logger.debug(f'matched "lists and guides page" {playlists[0]}')
             listAndGuidePage = match_LAG["ListAndGuidePage"]
-            endpoint = f"https://pitchfork.com/{listAndGuidePage}"
+            endpoint = f"{self.service_endpoint}/{listAndGuidePage}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             # links = soup.find_all("a", class_="title-link module__title-link")
@@ -38,7 +40,7 @@ class Pitchfork(ServiceClient):
                         "/topics/"
                     ):
                         data = self.session.get(
-                            f"https://pitchfork.com{atag['href']}"
+                            f"{self.service_endpoint}{atag['href']}"
                         )
                         soup = bs(data.text, "html5lib")
                         links = soup.find_all(
@@ -86,7 +88,7 @@ class Pitchfork(ServiceClient):
         if match_ARP:
             logger.debug(f'matched "album review page" {playlist}')
             reviewPage = match_ARP["reviewPage"]
-            endpoint = f"https://pitchfork.com/{reviewPage}"
+            endpoint = f"{self.service_endpoint}/{reviewPage}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
 
@@ -155,7 +157,7 @@ class Pitchfork(ServiceClient):
             playlist_results = []
             logger.info(f'matched "albums page" {playlist}')
             albumsPage = match_Albums["albumsPage"]
-            endpoint = f"https://pitchfork.com{albumsPage}"
+            endpoint = f"{self.service_endpoint}{albumsPage}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             pages = [
@@ -166,10 +168,10 @@ class Pitchfork(ServiceClient):
             ]
 
             def job(page):
-                if albumsPage.startswith("https://pitchfork.com/"):
+                if albumsPage.startswith(f"{self.service_endpoint}/"):
                     endpoint = page
                 else:
-                    endpoint = f"https://pitchfork.com{page}"
+                    endpoint = f"{self.service_endpoint}{page}"
 
                 data = self.session.get(endpoint)
                 soup = bs(data.text, "html5lib")
@@ -273,7 +275,7 @@ class Pitchfork(ServiceClient):
         if match_Tracks:
             logger.debug(f'matched "tracks page" {playlist}')
             tracksPage = match_Tracks["tracksPage"]
-            endpoint = f"https://pitchfork.com/{tracksPage}"
+            endpoint = f"{self.service_endpoint}{tracksPage}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             pages = soup.find_all("a", class_="fts-pagination__list-item__link")
@@ -283,7 +285,7 @@ class Pitchfork(ServiceClient):
             def job(page):
                 track_dict = {}
                 endpoint = (
-                    f"https://pitchfork.com/{tracksPage}?page={page.text}"
+                    f"{self.service_endpoint}/{tracksPage}?page={page.text}"
                 )
                 data = self.session.get(endpoint)
                 soup = bs(data.text, "html5lib")
@@ -325,7 +327,7 @@ class Pitchfork(ServiceClient):
         if match_Tracks:
             logger.debug(f'matched "year in music tracks page" {playlist}')
             tracksPage = match_Tracks["tracksPage"]
-            endpoint = f"https://pitchfork.com/{tracksPage}"
+            endpoint = f"{self.service_endpoint}/{tracksPage}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             items = soup.find_all("div", class_="list-blurb__artist-work")
@@ -363,10 +365,10 @@ class Pitchfork(ServiceClient):
         if match_YIMAlbums:
             logger.info(f'matched "year in music albums page" {playlist}')
             albumsPage = match_YIMAlbums["albumsPage"]
-            if albumsPage.startswith("https://pitchfork.com/"):
+            if albumsPage.startswith(self.service_endpoint):
                 endpoint = albumsPage
             else:
-                endpoint = f"https://pitchfork.com/{albumsPage}"
+                endpoint = f"{self.service_endpoint}/{albumsPage}"
 
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")

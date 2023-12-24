@@ -18,8 +18,10 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 class Apple(ServiceClient):
     service_uri = "applemusic"
     service_name = "Apple Music"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Apple_Music_icon.svg/200px-Apple_Music_icon.svg.png"
+    service_endpoint = "https://music.apple.com"
 
-    def get_applemusic_headers(self, endpoint=r"https://music.apple.com"):
+    def get_applemusic_headers(self, endpoint=service_endpoint):
         # Getting the access token first to send it with the header to the api endpoint
         page = self.session.get(f"{endpoint}/browse")
         soup = bs(page.content.decode("utf-8"), "html.parser")
@@ -53,7 +55,7 @@ class Apple(ServiceClient):
 
     def get_users_details(self, users):
         def job(user):
-            endpoint = f"https://music.apple.com/us/curator/{user}"  # npr-music/1437679561
+            endpoint = f"{self.service_endpoint}/us/curator/{user}"  # npr-music/1437679561
             data = self.session.get(endpoint)
             soup = bs(data.content.decode("utf-8"), "html5lib")
             user_dict = {"id": user, "name": soup.find("title").text}
@@ -84,7 +86,7 @@ class Apple(ServiceClient):
             {
                 "name": playlist["attributes"]["name"],
                 "id": playlist["attributes"]["url"].removeprefix(
-                    "https://music.apple.com/us/playlist/"
+                    f"{self.service_endpoint}/us/playlist/"
                 ),
             }
             for playlist in playlists
@@ -92,7 +94,7 @@ class Apple(ServiceClient):
 
     def get_playlists_details(self, playlists):
         def job(playlist):
-            endpoint = f"https://music.apple.com/us/playlist/{playlist}"
+            endpoint = f"{self.service_endpoint}/us/playlist/{playlist}"
             data = self.session.get(endpoint)
             soup = bs(data.content.decode("utf-8"), "html5lib")
             playlist_name = soup.find("title").text
@@ -215,7 +217,7 @@ class Apple(ServiceClient):
         # )
         playlistid_re = re.compile(r"^.+playlist/(?P<playlistid>.+$)")
 
-        endpoint = r"https://music.apple.com/us/browse"
+        endpoint = f"{self.service_endpoint}/us/browse"
         data = self.session.get(endpoint)
         soup = bs(data.content.decode("utf-8"), "html5lib")
 

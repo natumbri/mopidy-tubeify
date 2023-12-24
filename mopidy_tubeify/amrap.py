@@ -16,11 +16,14 @@ def format_episode_date(date_str):
 
 
 class Amrap(ServiceClient):
-    def __init__(self, proxy, headers, ytm_client, stationId, stationName):
+    def __init__(
+        self, proxy, headers, ytm_client, stationId, stationName, stationLogo
+    ):
         super().__init__(proxy, headers, ytm_client)
         self.stationId = stationId
         self.service_uri = stationId
         self.service_name = stationName
+        self.service_image = stationLogo
 
     def get_amrap_headers(self, stationId, programId):
         position_url = f"https://airnet.org.au/program/position.js.php?url=https://{stationId}.radiopages.info/{programId}&referrer=https%3A//airnet.org.au"

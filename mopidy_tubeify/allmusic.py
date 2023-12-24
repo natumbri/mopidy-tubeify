@@ -14,14 +14,15 @@ from mopidy_tubeify.yt_matcher import (
 class AllMusic(ServiceClient):
     service_uri = "allmusic"
     service_name = "AllMusic"
-    service_endpoint = "https://www.allmusic.com/"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/AllMusic_Logo.svg/187px-AllMusic_Logo.svg.png"
+    service_endpoint = "https://www.allmusic.com"
 
     def get_playlists_details(self, playlists):
         if playlists == []:
             return []
 
         if playlists[0] == "genres":
-            endpoint = f"{self.service_endpoint}{playlists[0]}"
+            endpoint = f"{self.service_endpoint}/{playlists[0]}"
             genre_block_re = re.compile(r"^genre\s(left|middle|right)$")
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib").find("div", id="allGenresGrid")
@@ -38,7 +39,7 @@ class AllMusic(ServiceClient):
             ]
 
         elif playlists[0] == "editorschoice":
-            endpoint = f"{self.service_endpoint}newreleases/{playlists[0]}"
+            endpoint = f"{self.service_endpoint}/newreleases/{playlists[0]}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             year_filter = soup.find("select", {"name": "year-filter"})
@@ -56,7 +57,7 @@ class AllMusic(ServiceClient):
             )
 
         elif re.match(r"^EC\-(?P<year>\d{4})$", playlists[0]):
-            endpoint = f"{self.service_endpoint}newreleases/editorschoice"
+            endpoint = f"{self.service_endpoint}/newreleases/editorschoice"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
 
@@ -67,13 +68,13 @@ class AllMusic(ServiceClient):
             return [
                 {
                     "name": month.text.strip(),
-                    "id": f"ECMY-{self.service_endpoint}newreleases/editorschoice/{month.text.strip().lower()}-{year}",
+                    "id": f"ECMY-{self.service_endpoint}/newreleases/editorschoice/{month.text.strip().lower()}-{year}",
                 }
                 for month in months
             ]
 
         elif re.match(r"^genre\-(?P<genreURL>.+)$", playlists[0]):
-            endpoint = f"{self.service_endpoint}{playlists[0][7:]}"
+            endpoint = f"{self.service_endpoint}/{playlists[0][7:]}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             if subgenre_soup := soup.find("div", class_="desktopOnly"):
@@ -115,7 +116,7 @@ class AllMusic(ServiceClient):
         if match_FNR:
             logger.debug(f'matched "featured new release" {playlist}')
             playlist = match_FNR["FNRdate"]
-            endpoint = f"{self.service_endpoint}newreleases/{playlist}"
+            endpoint = f"{self.service_endpoint}/newreleases/{playlist}"
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             page_albums_filter = soup.find_all("div", class_="newReleaseItem")
@@ -197,7 +198,7 @@ class AllMusic(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-        endpoint = f"{self.service_endpoint}newreleases"
+        endpoint = f"{self.service_endpoint}/newreleases"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 

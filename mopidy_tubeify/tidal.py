@@ -10,6 +10,11 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 class Tidal(ServiceClient):
     service_uri = "tidal"
     service_name = "Tidal"
+    service_image = (
+        "https://cdn4.iconfinder.com/data/icons/logos-brands-5/24/tidal-512.png"
+    )
+    service_endpoint = "https://tidal.com"
+
     playlist_regex = re.compile(
         r"https\:\/\/tidal\.com\/browse\/playlist\/(.{8}-.{4}-.{4}-.{4}-.{12})"
     )
@@ -30,7 +35,7 @@ class Tidal(ServiceClient):
     def get_playlists_details(self, playlists):
         def job(playlist):
             soup = self._get_tidal_soup(
-                f"https://tidal.com/browse/playlist/{playlist}"
+                f"{self.service_endpoint}/browse/playlist/{playlist}"
             )
             playlist_name = soup.find("title").text
             return {"name": playlist_name, "id": playlist}
@@ -45,7 +50,7 @@ class Tidal(ServiceClient):
     def get_playlist_tracks(self, playlist):
         # get tracks for each playlist and translate to ytm
         soup = Tidal._get_tidal_soup(
-            self, f"https://tidal.com/browse/playlist/{playlist}"
+            self, f"{self.service_endpoint}/browse/playlist/{playlist}"
         )
         tracks_soup = soup.find_all("div", class_="track-item has-info")
         track_dict = {}
@@ -120,7 +125,7 @@ class Tidal(ServiceClient):
         #   </a>
 
         playlistid_re = re.compile(r"/browse/playlist/(?P<playlistid>.+)")
-        soup = self._get_tidal_soup(r"https://tidal.com/browse/")
+        soup = self._get_tidal_soup(f"{self.service_endpoint}/browse/")
         playlist_section = soup.find("h2", text="New Playlists").find_parent(
             "section"
         )

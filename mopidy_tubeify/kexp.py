@@ -14,6 +14,7 @@ from mopidy_tubeify.yt_matcher import (
 class KEXP(ServiceClient):
     service_uri = "kexp"
     service_name = "KEXP 90.3FM"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/KEXP_logo_%28black_on_orange%29.svg/443px-KEXP_logo_%28black_on_orange%29.svg.png"
     service_endpoint = "http://www.kexplorer.com"
 
     def get_playlists_details(self, playlists):

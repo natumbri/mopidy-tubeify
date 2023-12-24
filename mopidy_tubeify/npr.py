@@ -5,16 +5,17 @@ from bs4 import BeautifulSoup as bs
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
+from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.yt_matcher import (
     search_and_get_best_albums,
     search_and_get_best_match,
 )
-from mopidy_tubeify.spotify import Spotify
 
 
 class NPR(ServiceClient):
     service_uri = "npr"
     service_name = "NPR"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/NPR_Music_logo.jpg/480px-NPR_Music_logo.jpg"
     service_endpoint = "https://www.npr.org"
 
     def get_playlists_details(self, playlists):

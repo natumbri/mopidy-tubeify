@@ -12,6 +12,8 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 class TripleR(ServiceClient):
     service_uri = "tripler"
     service_name = "3RRR 102.7FM"
+    service_image = "https://cdn-images-w3.rrr.org.au/1V_nPrxhwEWsjq5M5vV82UmmKwo=/600x600/filters:quality(85)/https://s3.ap-southeast-2.amazonaws.com/assets-w3.rrr.org.au/assets/091/a3b/6b5/091a3b6b51ac36547024c135434b0dacafd174d4/RRR-Facebook-Logo-White-Backg.jpg"
+    service_endpoint = "https://www.rrr.org.au"
 
     def get_playlists_details(self, playlists):
         def job(playlist):
@@ -20,7 +22,7 @@ class TripleR(ServiceClient):
             if match_PROGRAM:
                 logger.debug(f'matched "program" {playlist}')
                 programId = match_PROGRAM["programId"]
-                endpoint = f"https://www.rrr.org.au/explore/programs/{programId}/episodes/page?page=1"
+                endpoint = f"{self.service_endpoint}/explore/programs/{programId}/episodes/page?page=1"
                 data = self.session.get(endpoint)
                 soup = bs(data.content.decode("utf-8"), "html5lib")
 
@@ -59,7 +61,7 @@ class TripleR(ServiceClient):
         if re.match(r"^PROGRAM\-(?P<programId>.+)$", playlist):
             return self.get_playlists_details([playlist])
 
-        endpoint = f"https://www.rrr.org.au{playlist}"
+        endpoint = f"{self.service_endpoint}{playlist}"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 
@@ -89,7 +91,7 @@ class TripleR(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-        endpoint = "https://www.rrr.org.au/explore/programs"
+        endpoint = f"{self.service_endpoint}/explore/programs"
         data = self.session.get(endpoint)
         soup = bs(data.text, "html5lib")
 

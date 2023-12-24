@@ -4,7 +4,7 @@ import re
 import pykka
 from cachetools import TTLCache, cached
 from mopidy import backend, httpclient
-from mopidy.models import Ref
+from mopidy.models import Image, Ref
 from ytmusicapi import YTMusic
 
 from mopidy_tubeify import Extension, logger
@@ -16,7 +16,7 @@ from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.discogs import Discogs
 from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
-from mopidy_tubeify.lastfm import Lastfm
+from mopidy_tubeify.lastfm import LastFM
 from mopidy_tubeify.musicreviewworld import MusicReviewWorld
 from mopidy_tubeify.nme import NME
 from mopidy_tubeify.npr import NPR
@@ -80,7 +80,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             for service in standard_services
         }
 
-        authenticated_services = [Lastfm]
+        authenticated_services = [LastFM]
 
         [
             self.services.update(
@@ -123,6 +123,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             self.ytmusic,
             stationId="3pbs",
             stationName="3PBS 106.7FM",
+            stationLogo="https://www.pbsfm.org.au/sites/default/files/pbs-logo-stacked-col-2014.gif",
         )
 
 
@@ -402,3 +403,17 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             logger.warn(f"There was a problem with uri {uri}")
 
         return []
+
+    def get_images(self, uris):
+        images = {}
+        for uri in uris:
+            service = uri.split(":")[1]
+            if (
+                service in self.backend.services
+                and self.backend.services[service].service_image
+            ):
+                images[uri] = [
+                    Image(uri=self.backend.services[service].service_image)
+                ]
+
+        return images

@@ -17,22 +17,24 @@ from mopidy_tubeify.yt_matcher import (
 class RollingStone(ServiceClient):
     service_uri = "rollingstone"
     service_name = "Rolling Stone Magazine"
+    service_image = "https://play-lh.googleusercontent.com/ToohFdJJ016UxyObeFjWkB6wtp3_M-DiSaPvCJqV19kU_k0mGZ7SJPKrodbNJw4KGT4"
+    service_endpoint = "https://www.rollingstone.com"
 
     def get_playlists_details(self, playlists):
         # is this really a list of playlists, or is it a special case?
         if len(playlists) == 1:
             # did we get here from the homepage?
             if playlists[0] == "RS500BSOAT":
-                endpoint = r"https://www.rollingstone.com/music/music-lists/best-songs-of-all-time-1224767/"
+                endpoint = f"{self.service_endpoint}/music/music-lists/best-songs-of-all-time-1224767/"
                 idPrefix = playlists[0][5:]
             elif playlists[0] == "RS500BAOAT":
-                endpoint = r"https://www.rollingstone.com/music/music-lists/best-albums-of-all-time-1062063/"
+                endpoint = f"{self.service_endpoint}/music/music-lists/best-albums-of-all-time-1062063/"
                 idPrefix = playlists[0][5:]  # "listoflists-" + playlists[0][5:]
             elif playlists[0] == "RS100BDAOAT":
-                endpoint = r"https://www.rollingstone.com/music/music-lists/100-best-debut-albums-of-all-time-143608/"
+                endpoint = f"{self.service_endpoint}/music/music-lists/100-best-debut-albums-of-all-time-143608/"
                 idPrefix = playlists[0][5:]  # "listoflists-" + playlists[0][5:]
             elif playlists[0] == "RS100GCAOAT":
-                endpoint = r"https://www.rollingstone.com/music/music-lists/best-country-albums-1234581876/"
+                endpoint = f"{self.service_endpoint}/music/music-lists/best-country-albums-1234581876/"
                 idPrefix = playlists[0][5:]  # "listoflists-" + playlists[0][5:]
 
             segments_json = self._get_RS_json(endpoint)["listNavBar"][

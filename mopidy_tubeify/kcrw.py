@@ -14,6 +14,7 @@ class KCRW(ServiceClient):
     service_uri = "kcrw"
     service_name = "KCRW 89.9FM"
     service_endpoint = "https://www.kcrw.com"
+    service_image = f"{service_endpoint}/events/images/grand-opening-2017/logo-kcrw.png/image_preview"
 
     def get_playlists_details(self, playlists):
         def job(playlist):

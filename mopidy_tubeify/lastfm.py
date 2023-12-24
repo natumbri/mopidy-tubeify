@@ -13,9 +13,11 @@ from mopidy_tubeify.yt_matcher import (
 )
 
 
-class Lastfm(ServiceClient):
+class LastFM(ServiceClient):
     service_uri = "lastfm"
     service_name = "Last.fm"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Last.fm_favicon.png/480px-Last.fm_favicon.png"
+    # no service_endpoint - uses the pylast library to access last.fm
 
     playlist_kinds = {
         "get_loved_tracks": {"name": "loved tracks", "params": {"limit": 20}},

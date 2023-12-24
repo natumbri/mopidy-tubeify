@@ -12,6 +12,8 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_albums
 class NME(ServiceClient):
     service_uri = "nme"
     service_name = "NME"
+    service_image = "https://logowik.com/content/uploads/images/nme-new-musical-express7775.logowik.com.webp"
+    service_endpoint = "https://www.nme.com"
 
     def get_playlist_tracks(self, playlist):
         # album review pages
@@ -19,7 +21,7 @@ class NME(ServiceClient):
         if match_ARP:
             logger.info(f'matched "album review page" {playlist}')
             reviewPage = match_ARP["reviewPage"]
-            endpoint = f"https://www.nme.com/{reviewPage}"
+            endpoint = f"{self.service_endpoint}/{reviewPage}"
 
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
