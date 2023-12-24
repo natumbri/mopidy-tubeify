@@ -412,8 +412,8 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                 service in self.backend.services
                 and self.backend.services[service].service_image
             ):
-                images[uri] = [
-                    Image(uri=self.backend.services[service].service_image)
-                ]
+                images[uri] = (
+                    Image(uri=self.backend.services[service].service_image),
+                )
 
         return images

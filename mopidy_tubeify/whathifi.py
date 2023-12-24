@@ -1,24 +1,24 @@
 import re
 import unicodedata
-from mopidy_youtube.comms import Client
 
 from bs4 import BeautifulSoup as bs
 
 from mopidy_tubeify import logger
+from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.spotify import Spotify
-from mopidy_tubeify.tidal import Tidal
-
 from mopidy_tubeify.yt_matcher import (
     search_and_get_best_albums,
     search_and_get_best_match,
 )
-from mopidy_tubeify.data import flatten
 
 
 class WhatHiFi(ServiceClient):
     service_uri = "whathifi"
     service_name = "WhatHiFi"
+    service_image = (
+        "https://i.scdn.co/image/ab6775700000ee855f28402be2a38675edabae2b"
+    )
     service_endpoint = "https://www.whathifi.com"
 
     # listoflists end up here
@@ -110,19 +110,15 @@ class WhatHiFi(ServiceClient):
             tracks = []
             youtube_titles = self._split_headings(soup)
 
-            # youtube_titles = [
-            #     title for title in youtube_titles if re.search(r"-", title.text)
-            # ]
-
             if youtube_titles:
                 for title in youtube_titles:
                     video_title = self._extract_title(title)
 
-                    video_id = ""
+                    video_id = None
                     while not video_id:
                         title = title.find_next_sibling()
                         if not title:
-                            video_id = "Not found"
+                            break
                         if "youtube-video" in title.attrs.get("class"):
                             video_id = youtube_track_regex.match(
                                 title.find(
@@ -181,26 +177,26 @@ class WhatHiFi(ServiceClient):
             }
         ]
 
-    def _extract_title(self, item):
+    def _extract_section(self, item, section):
         try:
             return (
-                unicodedata.normalize("NFKD", item.text).split("-")[1].strip()
+                unicodedata.normalize("NFKD", item.text)
+                .split("-")[section]
+                .strip()
             )
         except Exception as e:
             return "[item loading]"
 
+    def _extract_title(self, item):
+        return self._extract_section(item, 1)
+
     def _extract_artists(self, item):
-        try:
-            return [
-                unicodedata.normalize("NFKD", item.text).split("-")[0].strip()
-            ]
-        except Exception as e:
-            return ["item loading"]
+        return self._extract_section(item, 0)
 
     def _split_headings(self, soup):
         headings = soup.find("div", attrs={"id": "article-body"}).find_all("h2")
         [
-            track.string.replace_with(track.text.replace("–", "-"))
-            for track in headings
+            heading.string.replace_with(heading.text.replace("–", "-"))
+            for heading in headings
         ]
         return headings
