@@ -28,11 +28,11 @@ class Spotify(ServiceClient):
         r"https\:\/\/open\.spotify\.com\/embed\/track\/(.{22})"
     )
 
-    def get_spotify_headers(self, endpoint=r"https://open.spotify.com/"):
+    def get_spotify_headers(self, endpoint=r"https://open.spotify.com"):
         # # Getting the access token first to send it with the header to the api endpoint
 
         # use temporary token from website
-        page = self.session.get(f"{endpoint}__noul__")
+        page = self.session.get(f"{endpoint}/__noul__")
         soup = bs(page.text, "html.parser")
         access_token_tag = soup.find("script", text=re.compile("accessToken"))
         json_obj = json.loads(access_token_tag.contents[0])
@@ -159,6 +159,12 @@ class Spotify(ServiceClient):
         data = self.session.get(endpoint).json()
         playlists = list(find_in_obj(data, "type", "playlist"))
 
+        self.uri_images.update(
+            {
+                playlist["id"]: playlist["images"][0]["url"]
+                for playlist in playlists
+            }
+        )
         return [
             {"name": playlist["name"], "id": playlist["id"]}
             for playlist in playlists
