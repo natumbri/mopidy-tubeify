@@ -28,8 +28,11 @@ class Apple(ServiceClient):
         # logger.debug(f"get_applemusic_headers base url: {endpoint}")
         js = soup.find("script", attrs={"type": "module"})
         page = self.session.get(f"{endpoint}/{js['src']}")
+
+        # is the access token always a 268 character long constant
+        # with a 2 letter name?
         access_token_text = re.search(
-            r"const df=\"([^\"]*)\"", page.text
+            r"const [a-zA-Z]{2}=\"([^\"]{268})\"", page.text
         ).group(1)
 
         # access_token_tag = soup.find(
@@ -244,6 +247,9 @@ class Apple(ServiceClient):
                     "name": unidecode(
                         sgli.find("a").text.replace("\n", "").strip()
                     ),
+                    "picture": sgli.find("picture")
+                    .source["srcset"]
+                    .split(" ")[0],
                 }
             }
             for sgli in sglis
@@ -255,6 +261,9 @@ class Apple(ServiceClient):
         for playlist in playlists:
             playlistid = playlistid_re.match(playlist["attributes"]["url"])
             if playlistid:
+                self.uri_images[playlistid["playlistid"]] = playlist[
+                    "attributes"
+                ]["picture"]
                 track_dicts.append(
                     {
                         "name": playlist["attributes"]["name"],

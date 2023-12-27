@@ -8,6 +8,7 @@ class ServiceClient(Client):
     service_name = None
     service_image = None
     service_endpoint = None
+    uri_images = {}
 
     def __init__(self, proxy, headers, ytm_client):
         super().__init__(proxy, headers)

@@ -65,7 +65,7 @@ class Spotify(ServiceClient):
         self.get_spotify_headers()
 
         def job(user):
-            endpoint = f"{self.service_endpoint}/v1/users/{user}"
+            endpoint = f"{Spotify.service_endpoint}/v1/users/{user}"
             data = self.session.get(endpoint).json()
             data["name"] = data["display_name"]
             return data
@@ -76,7 +76,7 @@ class Spotify(ServiceClient):
         return results
 
     def get_user_playlists(self, user):
-        endpoint = f"{self.service_endpoint}/v1/users/{user}/playlists"
+        endpoint = f"{Spotify.service_endpoint}/v1/users/{user}/playlists"
         self.get_spotify_headers()
         data = self.session.get(endpoint).json()
         playlists = data["items"]
@@ -86,7 +86,7 @@ class Spotify(ServiceClient):
         ]
 
     def _get_spotify_details(self, kind, tracklist):
-        endpoint = f"{self.service_endpoint}/v1/{kind}/{tracklist}"
+        endpoint = f"{Spotify.service_endpoint}/v1/{kind}/{tracklist}"
         data = self.session.get(endpoint).json()
         return data
 
@@ -154,7 +154,7 @@ class Spotify(ServiceClient):
 
     def get_service_homepage(self):
         self.get_spotify_headers()
-        endpoint = f"{self.service_endpoint}/v1/views/desktop-home"
+        endpoint = f"{Spotify.service_endpoint}/v1/views/desktop-home"
 
         data = self.session.get(endpoint).json()
         playlists = list(find_in_obj(data, "type", "playlist"))

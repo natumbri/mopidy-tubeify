@@ -93,7 +93,7 @@ class KCRW(ServiceClient):
         data = self.session.get(endpoint)
         soup = bs(data.content.decode("utf-8"), "html5lib")
 
-        programs = soup.find_all(
+        programs_soup = soup.find_all(
             "a",
             attrs={
                 "class": "single",
@@ -103,10 +103,9 @@ class KCRW(ServiceClient):
             },
         )
 
-        return [
-            {
-                "name": program["title"],
-                "id": f"listoflists-PROGRAM-{program['href'][20:]}",
-            }
-            for program in programs
-        ]
+        programs = []
+        for program_soup in programs_soup:
+            program_id = f"listoflists-PROGRAM-{program_soup['href'][20:]}"
+            programs.append({"name": program_soup["title"], "id": program_id})
+            self.uri_images[program_id] = program_soup.find("img").get("src")
+        return programs

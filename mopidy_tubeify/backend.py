@@ -407,13 +407,32 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
     def get_images(self, uris):
         images = {}
         for uri in uris:
+            # service = uri.split(":")[1]
+            # if (
+            #     service in self.backend.services
+            #     and self.backend.services[service].service_image
+            # ):
+            #     images[uri] = (
+            #         Image(uri=self.backend.services[service].service_image),
+            #     )
             service = uri.split(":")[1]
-            if (
-                service in self.backend.services
-                and self.backend.services[service].service_image
-            ):
-                images[uri] = (
-                    Image(uri=self.backend.services[service].service_image),
-                )
-
+            if "playlist_" in uri:
+                identifier = uri.split("playlist_")[1]
+            else:
+                identifier = None
+            if service in self.backend.services:
+                if identifier and self.backend.services[service].uri_images.get(
+                    identifier
+                ):
+                    images[uri] = (
+                        Image(
+                            uri=self.backend.services[service].uri_images[
+                                identifier
+                            ]
+                        ),
+                    )
+                elif self.backend.services[service].service_image:
+                    images[uri] = (
+                        Image(uri=self.backend.services[service].service_image),
+                    )
         return images

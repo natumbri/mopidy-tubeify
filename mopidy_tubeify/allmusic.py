@@ -27,16 +27,15 @@ class AllMusic(ServiceClient):
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib").find("div", id="allGenresGrid")
             genres = soup.find_all("div", attrs={"class": "gridItem"})
-            metas = [
-                genre.find("div", attrs={"class": "meta"}) for genre in genres
-            ]
-            return [
-                {
-                    "name": meta.a.text,
-                    "id": f"listoflists-genre-{meta.a['href']}",
-                }
-                for meta in metas
-            ]
+            genre_details = []
+            for genre in genres:
+                meta = genre.find("div", attrs={"class": "meta"})
+                name = meta.a.text
+                genre_id = f"listoflists-genre-{meta.a['href']}"
+                genre_details.append({"name": name, "id": genre_id})
+                image = genre.find("img")["src"]
+                self.uri_images[genre_id] = f"{self.service_endpoint}{image}"
+            return genre_details
 
         elif playlists[0] == "editorschoice":
             endpoint = f"{self.service_endpoint}/newreleases/{playlists[0]}"

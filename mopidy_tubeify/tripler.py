@@ -101,14 +101,11 @@ class TripleR(ServiceClient):
         program_regex = re.compile(r"^/explore/programs/(?P<programId>.+)$")
         track_dicts = []
 
-        [
-            track_dicts.append(
-                {
-                    "name": card.find(class_="card__text").a.text,
-                    "id": f"listoflists-PROGRAM-{program_regex.match((card.find(class_='card__text').a.get('href')))['programId']}",
-                }
-            )
-            for card in cards_soup
-        ]
+        for card in cards_soup:
+            name = card.find(class_="card__text").a.text
+            program_id = f"listoflists-PROGRAM-{program_regex.match((card.find(class_='card__text').a.get('href')))['programId']}"
+            image = card.find("img")["data-src"]
+            track_dicts.append({"name": name, "id": program_id})
+            self.uri_images[program_id] = image
 
         return track_dicts

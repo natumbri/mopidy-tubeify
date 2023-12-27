@@ -27,14 +27,37 @@ class NPR(ServiceClient):
                     f"{self.service_endpoint}{match_npr_music_playlists[1]}"
                 )
                 soup = bs(data.text, "html5lib")
-                articles = soup.find("div", attrs={"id": "overflow"}).find_all(
-                    "h2"
+                results = []
+                articles = soup.find_all(
+                    "article", attrs={"class": re.compile(r"item")}
                 )
+                for article in articles:
+                    text = article.find("h2").a
+                    results.append({"name": text.text, "id": text["href"]})
+                    self.uri_images[text["href"]] = article.find("img")["src"]
+                return results
 
-                return [
-                    {"name": article.a.text, "id": article.a["href"]}
-                    for article in articles
-                ]
+            match_npr_music_playlists_archive = re.match(
+                r"ARCHIVE(.*)", playlists[0]
+            )
+            if match_npr_music_playlists_archive:
+                data = self.session.get(
+                    f"{self.service_endpoint}{match_npr_music_playlists_archive[1]}"
+                )
+                soup = bs(data.text, "html5lib")
+
+                results = []
+                archives = soup.find(
+                    "nav", attrs={"class": "archive-nav"}
+                ).find_all("li")
+                for archive in archives:
+                    results.append(
+                        {
+                            "name": archive.a.text,
+                            "id": f'listoflists-NPRPL{archive.a["href"]}',
+                        }
+                    )
+                return results
 
             # did we get here from the homepage?
             if playlists[0] == "NPR100BSO2022":
@@ -152,7 +175,7 @@ class NPR(ServiceClient):
             },
             {
                 "name": "NPR Playlists Archive",
-                "id": "listoflists-NPRPL/series/526652351/npr-music-playlists/archive",
+                "id": "listoflists-ARCHIVE/series/526652351/npr-music-playlists/archive",
             },
             {
                 "name": "NPR New Music Friday",
