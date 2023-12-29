@@ -1,7 +1,5 @@
 import re
 
-from bs4 import BeautifulSoup as bs
-
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
@@ -17,32 +15,70 @@ class AllMusic(ServiceClient):
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/AllMusic_Logo.svg/187px-AllMusic_Logo.svg.png"
     service_endpoint = "https://www.allmusic.com"
 
+    service_schema = {
+        "albums": {
+            "container": {
+                "tag": "div",
+                "attrs": {"id": "descriptorAlbumHighlights"},
+            },
+            "item": {"tag": "div", "attrs": {"class": "singleGenreAlbum"}},
+        },
+        "genre": {
+            "container": {"tag": "div", "attrs": {"class": "desktopOnly"}},
+            "item": {"tag": "a", "attrs": {"class": "genre-links"}},
+        },
+        "genres": {
+            "container": {"tag": "div", "attrs": {"id": "allGenresGrid"}},
+            "item": {"tag": "div", "attrs": {"class": "gridItem"}},
+        },
+        "editorschoice": {
+            "container": {"tag": "select", "attrs": {"name": "year-filter"}},
+            "item": {"tag": "option", "attrs": {}},
+        },
+        "EC-yyyy": {
+            "container": {"tag": "select", "attrs": {"name": "month-filter"}},
+            "item": {"tag": "option", "attrs": {}},
+        },
+        "ECMY": {
+            "item": {"tag": "div", "attrs": {"class": "editorsChoiceItem"}}
+        },
+        "FeaturedNewRelease": {
+            "item": {"tag": "div", "attrs": {"class": "newReleaseItem"}}
+        },
+        "newreleases": {
+            "container": {"tag": "select", "attrs": {"name": "week-filter"}},
+            "item": {"tag": "option", "attrs": {}},
+        },
+        "songs": {
+            "container": {
+                "tag": "div",
+                "attrs": {"id": "descriptorSongHighlights"},
+            },
+            "item": {"tag": "div", "attrs": {"class": "songRow"}},
+        },
+    }
+
     def get_playlists_details(self, playlists):
         if playlists == []:
             return []
 
         if playlists[0] == "genres":
-            endpoint = f"{self.service_endpoint}/{playlists[0]}"
-            genre_block_re = re.compile(r"^genre\s(left|middle|right)$")
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib").find("div", id="allGenresGrid")
-            genres = soup.find_all("div", attrs={"class": "gridItem"})
+            genres = self._get_items_soup(f"/{playlists[0]}", playlists[0])
             genre_details = []
             for genre in genres:
                 meta = genre.find("div", attrs={"class": "meta"})
                 name = meta.a.text
                 genre_id = f"listoflists-genre-{meta.a['href']}"
                 genre_details.append({"name": name, "id": genre_id})
-                image = genre.find("img")["src"]
-                self.uri_images[genre_id] = f"{self.service_endpoint}{image}"
+                self.uri_images[
+                    genre_id
+                ] = f"{self.service_endpoint}{genre.find('img')['src']}"
             return genre_details
 
         elif playlists[0] == "editorschoice":
-            endpoint = f"{self.service_endpoint}/newreleases/{playlists[0]}"
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-            year_filter = soup.find("select", {"name": "year-filter"})
-            years = year_filter.find_all("option")
+            years = self._get_items_soup(
+                f"/newreleases/{playlists[0]}", playlists[0]
+            )
             return sorted(
                 [
                     {
@@ -56,36 +92,29 @@ class AllMusic(ServiceClient):
             )
 
         elif re.match(r"^EC\-(?P<year>\d{4})$", playlists[0]):
-            endpoint = f"{self.service_endpoint}/newreleases/editorschoice"
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-
             year = re.match(r"^EC\-(?P<year>\d{4})$", playlists[0])["year"]
-            month_filter = soup.find("select", {"name": "month-filter"})
-            months = month_filter.find_all("option")
-
+            months = self._get_items_soup(
+                "/newreleases/editorschoice", "EC-yyyy"
+            )
             return [
                 {
                     "name": month.text.strip(),
-                    "id": f"ECMY-{self.service_endpoint}/newreleases/editorschoice/{month.text.strip().lower()}-{year}",
+                    "id": f"ECMY-/newreleases/editorschoice/{month.text.strip().lower()}-{year}",
                 }
                 for month in months
             ]
 
         elif re.match(r"^genre\-(?P<genreURL>.+)$", playlists[0]):
-            endpoint = f"{self.service_endpoint}/{playlists[0][7:]}"
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-            if subgenre_soup := soup.find("div", class_="desktopOnly"):
+            endpoint = f"/{playlists[0][7:]}"
+            subgenre_soup = self._get_items_soup(endpoint, "genre")
+            if subgenre_soup:
                 subgenres = sorted(
                     [
                         {
                             "name": link["title"],
                             "id": f'listoflists-genre-{link["href"]}',
                         }
-                        for link in subgenre_soup.find_all(
-                            "a", class_="genre-links"
-                        )
+                        for link in subgenre_soup
                     ],
                     key=lambda k: k["name"],
                 )
@@ -114,33 +143,24 @@ class AllMusic(ServiceClient):
         match_FNR = re.match(r"^FNR\-(?P<FNRdate>.+)$", playlist)
         if match_FNR:
             logger.debug(f'matched "featured new release" {playlist}')
-            playlist = match_FNR["FNRdate"]
-            endpoint = f"{self.service_endpoint}/newreleases/{playlist}"
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-            page_albums_filter = soup.find_all("div", class_="newReleaseItem")
+            page_albums_filter = self._get_items_soup(
+                f"/newreleases/{match_FNR['FNRdate']}", "FeaturedNewRelease"
+            )
 
         match_ECMY = re.match(r"^ECMY\-(?P<albumsURL>.+)$", playlist)
         if match_ECMY:
             logger.debug(f'matched "editors choice month-year" {playlist}')
-            endpoint = match_ECMY["albumsURL"]
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-            page_albums_filter = soup.find_all(
-                "div", class_="editorsChoiceItem"
+            page_albums_filter = self._get_items_soup(
+                match_ECMY["albumsURL"], "ECMY"
             )
 
         # deal with genre and style album pages
         match_albums = re.match(r"^albums\-(?P<albumsURL>.+)$", playlist)
         if match_albums:
             logger.debug(f'matched "genre albums page" {playlist}')
-            endpoint = match_albums["albumsURL"]
-            print(endpoint)
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-            page_albums_filter = soup.find(
-                "div", id="descriptorAlbumHighlights"
-            ).find_all("div", class_="singleGenreAlbum")
+            page_albums_filter = self._get_items_soup(
+                match_albums["albumsURL"], "albums"
+            )
             # genre and style pages use spans and "descriptor" classes
             # convert to divs
             for page_album in page_albums_filter:
@@ -172,16 +192,9 @@ class AllMusic(ServiceClient):
         match_songs = re.match(r"^songs\-(?P<songsURL>.+)$", playlist)
         if match_songs:
             logger.debug(f'matched "genre songs page" {playlist}')
-            endpoint = match_songs["songsURL"]
-            print(endpoint)
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-            page_tracks_filter = (
-                soup.find("div", id="descriptorSongHighlights")
-                .find("div", class_="descriptorSubGrid")
-                .find_all("div", class_="songRow")
+            page_tracks_filter = self._get_items_soup(
+                match_songs["songsURL"], "songs"
             )
-
             tracks = [
                 {
                     "song_name": track.find("span", class_="songTitle").a.text,
@@ -197,13 +210,7 @@ class AllMusic(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-        endpoint = f"{self.service_endpoint}/newreleases"
-        data = self.session.get(endpoint)
-        soup = bs(data.text, "html5lib")
-
-        week_filter = soup.find("select", {"name": "week-filter"})
-        weeks = week_filter.find_all("option")
-
+        weeks = self._get_items_soup("/newreleases", "newreleases")
         return (
             [
                 {

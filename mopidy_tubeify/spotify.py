@@ -13,11 +13,6 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Spotify(ServiceClient):
-    service_uri = "spotify"
-    service_name = "Spotify"
-    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/400px-Spotify_App_Logo.svg.png"
-    service_endpoint = "https://api.spotify.com"
-
     playlist_regex = re.compile(
         r"https\:\/\/open\.spotify\.com\/.*\/?playlist\/(.{22})"
     )
@@ -27,6 +22,21 @@ class Spotify(ServiceClient):
     track_regex = re.compile(
         r"https\:\/\/open\.spotify\.com\/embed\/track\/(.{22})"
     )
+
+
+    service_uri = "spotify"
+    service_name = "Spotify"
+    service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/400px-Spotify_App_Logo.svg.png"
+    service_endpoint = "https://api.spotify.com"
+    service_schema = {
+        "embeded_playlist": {
+            "container": {
+                "tag": "iframe",
+                "attrs": {"src": playlist_regex},
+            }
+        },
+    }
+
 
     def get_spotify_headers(self, endpoint=r"https://open.spotify.com"):
         # # Getting the access token first to send it with the header to the api endpoint

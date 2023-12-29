@@ -14,6 +14,7 @@ from mopidy_tubeify.apple import Apple
 from mopidy_tubeify.bestlivealbums import BestLiveAlbums
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.discogs import Discogs
+from mopidy_tubeify.farout import FarOut
 from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
 from mopidy_tubeify.lastfm import LastFM
@@ -63,6 +64,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             Apple,
             BestLiveAlbums,
             Discogs,
+            FarOut,
             KCRW,
             KEXP,
             MusicReviewWorld,

@@ -101,8 +101,8 @@ class Discogs(ServiceClient):
                     "wpnonce": None,
                 },
             ).text
-
             soup = bs(data, "html5lib")
+
             divs += soup.find_all("div", attrs={"class": "ultp-block-content"})
             i += 1
 

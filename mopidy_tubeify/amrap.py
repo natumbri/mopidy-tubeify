@@ -20,13 +20,14 @@ class Amrap(ServiceClient):
         self, proxy, headers, ytm_client, stationId, stationName, stationLogo
     ):
         super().__init__(proxy, headers, ytm_client)
+        self.service_endpoint = "https://airnet.org.au"
         self.stationId = stationId
         self.service_uri = stationId
         self.service_name = stationName
         self.service_image = stationLogo
 
     def get_amrap_headers(self, stationId, programId):
-        position_url = f"https://airnet.org.au/program/position.js.php?url=https://{stationId}.radiopages.info/{programId}&referrer=https%3A//airnet.org.au"
+        position_url = f"{self.service_endpoint}/program/position.js.php?url=https://{stationId}.radiopages.info/{programId}&referrer=https%3A//airnet.org.au"
 
         position_response = self.session.get(position_url)
 
@@ -93,7 +94,7 @@ class Amrap(ServiceClient):
                 self.session.headers.update(
                     {"X-CSRF-Token": program_details["csrfToken"]}
                 )
-                endpoint = "https://airnet.org.au/program/ajax-server/getEpisodeArchive.php"
+                endpoint = f"{self.service_endpoint}/program/ajax-server/getEpisodeArchive.php"
 
                 episode_archive_page = self.session.get(
                     endpoint, params=program_details
@@ -173,7 +174,7 @@ class Amrap(ServiceClient):
             {"X-CSRF-Token": program_details["csrfToken"]}
         )
 
-        episode_url = "https://airnet.org.au/program/ajax-server/getEpisode.php"
+        episode_url = f"{self.service_endpoint}/program/ajax-server/getEpisode.php"
         episode_response = self.session.post(episode_url, data=program_details)
         episode_response_soup = bs(
             episode_response.content.decode("unicode-escape"),
@@ -227,7 +228,7 @@ class Amrap(ServiceClient):
 
     def get_service_homepage(self):
         base_url = f"https://{self.stationId}.radiopages.info/"
-        position_url = f"https://airnet.org.au/program/position.js.php?url={base_url}&referrer=https%3A//airnet.org.au"
+        position_url = f"{self.service_endpoint}/program/position.js.php?url={base_url}&referrer=https%3A//airnet.org.au"
 
         programs_response = self.session.get(position_url)
         programs_url = re.search(

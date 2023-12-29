@@ -13,17 +13,24 @@ class BestLiveAlbums(ServiceClient):
     service_uri = "bestlivealbums"
     service_name = "Best Live & Studio Albums Website"
     service_endpoint = "http://www.bestlivealbums.com"
+    service_schema = {
+        "live-album-polls": {
+            "container": {"tag": "article", "attrs": {}},
+            "item": {"tag": "ul", "attrs": {}}
+        },
+        "lists-of-best-live-albums": {
+            "container": {"tag": "div", "attrs": {"class": "entry-content"}},
+            "item": {"tag": "ol", "attrs": {}}
+        },
+        "homepage": {
+            "container": {"tag": "div", "attrs": {"class": "menu-main-menu-container"}},
+            "item": {"tag": "li", "attrs": {"class": re.compile(r"menu-item.*")}}
+        }
+    }
 
     def get_playlists_details(self, playlists):
         if playlists == ["/live-album-polls/"]:
-            endpoint = f"{self.service_endpoint}{playlists[0]}"
-            data = self.session.get(endpoint)
-            soup = (
-                bs(data.content.decode("utf-8"), "html5lib")
-                .find("article")
-                .find_all("ul")
-            )
-
+            soup = self._get_items_soup(playlists[0], "live-album-polls")
             genres = [
                 {
                     "name": page.a.text,
@@ -43,14 +50,7 @@ class BestLiveAlbums(ServiceClient):
             return genres + artists
 
         if playlists == ["/lists-of-best-live-albums/"]:
-            endpoint = f"{self.service_endpoint}{playlists[0]}"
-            data = self.session.get(endpoint)
-            soup = (
-                bs(data.content.decode("utf-8"), "html5lib")
-                .find("div", attrs={"class": "entry-content"})
-                .find_all("ol")
-            )
-
+            soup = self._get_items_soup(playlists[0], "lists-of-best-live-albums")
             return [
                 {
                     "name": ordered_list.findPrevious("strong").text,
@@ -182,15 +182,7 @@ class BestLiveAlbums(ServiceClient):
         return
 
     def get_service_homepage(self):
-        endpoint = self.service_endpoint
-        data = self.session.get(endpoint)
-
-        soup = (
-            bs(data.content.decode("utf-8"), "html5lib")
-            .find("div", attrs={"class": "menu-main-menu-container"})
-            .find_all("li", attrs={"class": re.compile(r"menu-item.*")})
-        )
-
+        soup = self._get_items_soup("", "homepage")
         return [
             {
                 "name": page.a.text,

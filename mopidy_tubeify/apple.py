@@ -20,6 +20,19 @@ class Apple(ServiceClient):
     service_name = "Apple Music"
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Apple_Music_icon.svg/200px-Apple_Music_icon.svg.png"
     service_endpoint = "https://music.apple.com"
+    service_schema = {
+        "homepage": {
+            "item": {
+                "tag": "li",
+                "attrs": {
+                    "role": "listitem",
+                    "class": re.compile(r"shelf-grid__list-item"),
+                },
+            },
+        },
+        "playlist": {"container": {"tag": "title", "attrs": {}}},
+        "user": {"container": {"tag": "title", "attrs": {}}},
+    }
 
     def get_applemusic_headers(self, endpoint=service_endpoint):
         # Getting the access token first to send it with the header to the api endpoint
@@ -58,11 +71,8 @@ class Apple(ServiceClient):
 
     def get_users_details(self, users):
         def job(user):
-            endpoint = f"{self.service_endpoint}/us/curator/{user}"  # npr-music/1437679561
-            data = self.session.get(endpoint)
-            soup = bs(data.content.decode("utf-8"), "html5lib")
-            user_dict = {"id": user, "name": soup.find("title").text}
-            return user_dict
+            user_name = self._get_items_soup(f"/us/curator/{user}", "user").text
+            return {"id": user, "name": user_name}
 
         results = []
 
@@ -97,10 +107,9 @@ class Apple(ServiceClient):
 
     def get_playlists_details(self, playlists):
         def job(playlist):
-            endpoint = f"{self.service_endpoint}/us/playlist/{playlist}"
-            data = self.session.get(endpoint)
-            soup = bs(data.content.decode("utf-8"), "html5lib")
-            playlist_name = soup.find("title").text
+            playlist_name = self._get_items_soup(
+                f"/us/playlist/{playlist.split('/')[1]}", "playlist"
+            ).text
             return {"name": playlist_name, "id": playlist}
 
         results = []
@@ -218,11 +227,10 @@ class Apple(ServiceClient):
         # content_re = re.compile(
         #     r"^.+platform\.web[^\[]+(?P<content>.+\])\}\"\}$"
         # )
-        playlistid_re = re.compile(r"^.+playlist/(?P<playlistid>.+$)")
 
-        endpoint = f"{self.service_endpoint}/us/browse"
-        data = self.session.get(endpoint)
-        soup = bs(data.content.decode("utf-8"), "html5lib")
+        # endpoint = f"{self.service_endpoint}/us/browse"
+        # data = self.session.get(endpoint)
+        # soup = bs(data.content.decode("utf-8"), "html5lib")
 
         # # this script seems to have a json record of all the tracks
         # # in the playlist, with information including title, duration,
@@ -236,10 +244,11 @@ class Apple(ServiceClient):
         # content = json.loads(extracted_content["content"])
         # playlists = list(find_in_obj(content, "type", "playlists"))
 
-        sgli_re = re.compile(r"shelf-grid__list-item")
-        sglis = soup.find_all(
-            "li", {"role": "listitem", "class": sgli_re.match}
-        )
+        # sgli_re = re.compile(r"shelf-grid__list-item")
+        # sglis = soup.find_all(
+        #     "li", {"role": "listitem", "class": sgli_re.match}
+        # )
+        sglis = self._get_items_soup("/us/browse", "homepage")
         playlists = [
             {
                 "attributes": {
@@ -258,6 +267,7 @@ class Apple(ServiceClient):
 
         track_dicts = []
 
+        playlistid_re = re.compile(r"^.+playlist/(?P<playlistid>.+$)")
         for playlist in playlists:
             playlistid = playlistid_re.match(playlist["attributes"]["url"])
             if playlistid:

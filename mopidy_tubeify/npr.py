@@ -1,7 +1,5 @@
 import re
 
-from bs4 import BeautifulSoup as bs
-
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
@@ -17,39 +15,49 @@ class NPR(ServiceClient):
     service_name = "NPR"
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/NPR_Music_logo.jpg/480px-NPR_Music_logo.jpg"
     service_endpoint = "https://www.npr.org"
+    service_schema = {
+        "bxox": {"container": {"tag": "div", "attrs": {"class": "subtopics"}}},
+        "embeded_spotify_playlist": Spotify.service_schema[
+            "embeded_playlist"
+        ],
+        "nmf": {
+            "container": {"tag": "div", "attrs": {"id": "storytext"}},
+            "item": {"tag": "li", "attrs": {}},
+        },
+        "nprjson": {"item": {"tag": "h6", "attrs": {}}},
+        "nprpl": {
+            "item": {"tag": "article", "attrs": {"class": re.compile(r"item")}},
+        },
+        "plarchive": {
+            "container": {"tag": "nav", "attrs": {"class": "archive-nav"}},
+            "item": {"tag": "li", "attrs": {}},
+        },
+    }
 
     def get_playlists_details(self, playlists):
         # is this really a list of playlists, or is it a special case?
         if len(playlists) == 1:
             match_npr_music_playlists = re.match(r"NPRPL(.*)", playlists[0])
             if match_npr_music_playlists:
-                data = self.session.get(
-                    f"{self.service_endpoint}{match_npr_music_playlists[1]}"
+                articles = self._get_items_soup(
+                    match_npr_music_playlists[1], "nprpl"
                 )
-                soup = bs(data.text, "html5lib")
                 results = []
-                articles = soup.find_all(
-                    "article", attrs={"class": re.compile(r"item")}
-                )
                 for article in articles:
                     text = article.find("h2").a
-                    results.append({"name": text.text, "id": text["href"]})
-                    self.uri_images[text["href"]] = article.find("img")["src"]
+                    article_id = text["href"].replace(self.service_endpoint, "")
+                    results.append({"name": text.text, "id": article_id})
+                    self.uri_images[article_id] = article.find("img")["src"]
                 return results
 
             match_npr_music_playlists_archive = re.match(
                 r"ARCHIVE(.*)", playlists[0]
             )
             if match_npr_music_playlists_archive:
-                data = self.session.get(
-                    f"{self.service_endpoint}{match_npr_music_playlists_archive[1]}"
+                archives = self._get_items_soup(
+                    match_npr_music_playlists_archive[1], "plarchive"
                 )
-                soup = bs(data.text, "html5lib")
-
                 results = []
-                archives = soup.find(
-                    "nav", attrs={"class": "archive-nav"}
-                ).find_all("li")
                 for archive in archives:
                     results.append(
                         {
@@ -61,22 +69,16 @@ class NPR(ServiceClient):
 
             # did we get here from the homepage?
             if playlists[0] == "NPR100BSO2022":
-                endpoint = f"{self.service_endpoint}/2022/12/15/1135802083/100-best-songs-2022-page-1"
+                endpoint = f"/2022/12/15/1135802083/100-best-songs-2022-page-1"
                 idPrefix = "BSOx"
-                page1 = [
-                    {"name": "100-81", "id": f"{idPrefix}-{endpoint[19:]}"}
-                ]
+                page1 = [{"name": "100-81", "id": f"{idPrefix}-{endpoint}"}]
 
             elif playlists[0] == "NPR50BAO2022":
-                endpoint = f"{self.service_endpoint}/2022/12/12/1134898067/50-best-albums-2022-page-1"
+                endpoint = f"/2022/12/12/1134898067/50-best-albums-2022-page-1"
                 idPrefix = "BAOx"
-                page1 = [{"name": "50-41", "id": f"{idPrefix}-{endpoint[19:]}"}]
+                page1 = [{"name": "50-41", "id": f"{idPrefix}-{endpoint}"}]
 
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
-
-            segments_filter = soup.find("div", class_="subtopics")
-
+            segments_filter = self._get_items_soup(endpoint, "bxox")
             return page1 + [
                 {"name": atag.text, "id": f"{idPrefix}-{atag['href']}"}
                 for atag in segments_filter.find_all("a")
@@ -119,12 +121,11 @@ class NPR(ServiceClient):
             playlist,
         )
         if matchNMF:
-            data = self.session.get(playlist)
-            soup = bs(data.text, "html5lib")
             albums_list = []
-            for album in soup.find("div", attrs={"id": "storytext"}).find_all(
-                "li"
-            ):
+            albums_soup = self._get_items_soup(
+                playlist.replace(self.service_endpoint, ""), "nmf"
+            )
+            for album in albums_soup:
                 try:
                     album_name = album.em.extract().text.strip()
                     album_artist = re.split("— |- |, ", album.text)[0].strip()
@@ -142,17 +143,13 @@ class NPR(ServiceClient):
 
         # some NPR pages have their playlists as spotify playlists (and Apple Music playlists)
         # so, use those
-        data = self.session.get(playlist)
-        soup = bs(data.text, "html5lib")
-        spl_regex = re.compile(
-            r"https\:\/\/open\.spotify\.com\/embed\/playlist\/(.{22})"
-        )
-        spotify_playlist = spl_regex.match(
-            soup.find("iframe", src=spl_regex)["src"]
-        )
+        spotify_playlist = Spotify.playlist_regex.match(
+            self._get_items_soup(playlist, "embeded_spotify_playlist")["src"]
+        )[1]
+
         if spotify_playlist:
             # hopefully, this isn't a terrible idea...
-            return Spotify.get_playlist_tracks(self, spotify_playlist[1])
+            return Spotify.get_playlist_tracks(self, spotify_playlist)
 
     def get_service_homepage(self):
         # future: programatically generate album and song lists from
@@ -184,9 +181,11 @@ class NPR(ServiceClient):
         ]
 
     def _get_NPR_json(self, endpoint):
-        data = self.session.get(f"{self.service_endpoint}{endpoint}")
-        soup = bs(data.text, "html5lib")
-        list_numbers = soup.find_all("h6", text=re.compile(r"\d{1,3}\."))
+        list_numbers = [
+            heading
+            for heading in self._get_items_soup(endpoint, "nprjson")
+            if re.match(r"\d{1,3}\.", heading.text)
+        ]
         items_dicts = []
         for list_number in list_numbers:
             html = []
