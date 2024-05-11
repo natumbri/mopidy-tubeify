@@ -17,9 +17,7 @@ class NPR(ServiceClient):
     service_endpoint = "https://www.npr.org"
     service_schema = {
         "bxox": {"container": {"tag": "div", "attrs": {"class": "subtopics"}}},
-        "embeded_spotify_playlist": Spotify.service_schema[
-            "embeded_playlist"
-        ],
+        "embeded_spotify_playlist": Spotify.service_schema["embeded_playlist"],
         "nmf": {
             "container": {"tag": "div", "attrs": {"id": "storytext"}},
             "item": {"tag": "li", "attrs": {}},

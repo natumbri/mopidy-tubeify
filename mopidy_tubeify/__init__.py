@@ -34,3 +34,11 @@ class Extension(ext.Extension):
         from .backend import TubeifyBackend
 
         registry.add("backend", TubeifyBackend)
+        registry.add(
+            "http:app", {"name": self.ext_name, "factory": self.factory}
+        )
+
+    def factory(self, config, core):
+        from .web import WebHandler
+
+        return [(r"/", WebHandler, {"config": config, "core": core})]

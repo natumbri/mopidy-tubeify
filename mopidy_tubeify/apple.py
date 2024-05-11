@@ -16,6 +16,8 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class Apple(ServiceClient):
+    playlistid_re = re.compile(r"^.*\/(?P<playlistid>pl\..+$)")
+
     service_uri = "applemusic"
     service_name = "Apple Music"
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Apple_Music_icon.svg/200px-Apple_Music_icon.svg.png"
@@ -193,8 +195,8 @@ class Apple(ServiceClient):
         self.get_applemusic_headers()
 
         # for the API endpoint, only need the playlist id
-        playlistid_re = re.compile(r"^.*\/(?P<playlistid>pl\..+$)")
-        endpoint = f'https://amp-api.music.apple.com/v1/catalog/us/playlists/{playlistid_re.match(playlist)["playlistid"]}'
+
+        endpoint = f'https://amp-api.music.apple.com/v1/catalog/us/playlists/{self.playlistid_re.match(playlist)["playlistid"]}'
         data = self.session.get(endpoint).json()
         content_tracks = data["data"][0]["relationships"]["tracks"]["data"]
 

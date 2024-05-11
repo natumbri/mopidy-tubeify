@@ -112,7 +112,6 @@ class KEXP(ServiceClient):
             return list(flatten(albums_to_return))
 
     def get_service_homepage(self):
-
         djs = [
             dj.a
             for djs in [

@@ -4,7 +4,7 @@ import re
 import pykka
 from cachetools import TTLCache, cached
 from mopidy import backend, httpclient
-from mopidy.models import Image, Ref
+from mopidy.models import Image, Ref, Track, Artist, Album
 from ytmusicapi import YTMusic
 
 from mopidy_tubeify import Extension, logger
@@ -82,7 +82,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             for service in standard_services
         }
 
-        authenticated_services = [LastFM]
+        authenticated_services = []  #  [LastFM]
 
         [
             self.services.update(
@@ -130,7 +130,6 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
 
 
 class TubeifyLibraryProvider(backend.LibraryProvider):
-
     """
     Called when root_directory is set to [insert description]
     When enabled makes possible to browse the users listed in
@@ -314,97 +313,106 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             tracks = self.backend.services[service].get_playlist_tracks(
                 playlist_uri
             )
-            good_tracks = []
-            good_albums = []
-            trackrefs = []
 
-            if tracks:
-                good_tracks = [
-                    track
-                    for track in tracks
-                    if "videoId" in track
-                    and track["videoId"]
-                    and "title" in track
-                    and track["title"]
-                ]
-
-                # good_tracks.extend(
-                #     [
-                #         dict(
-                #             video,
-                #             **{
-                #                 "videoId": video["videoDetails"]["videoId"],
-                #                 "title": video["videoDetails"]["title"],
-                #             },
-                #         )
-                #         for video in tracks
-                #         if "videoDetails" in video
-                #         and "videoId" in video["videoDetails"]
-                #         and video["videoDetails"]["videoId"]
-                #         and "title" in video["videoDetails"]
-                #         and video["videoDetails"]["title"]
-                #     ]
-                # )
-
-                good_albums = [
-                    album
-                    for album in tracks
-                    if "type" in album
-                    and album["type"] == "Album"
-                    and album["browseId"]
-                    and "title" in album
-                    and album["title"]
-                    and "artists" in album
-                    and album["artists"]
-                ]
-
-            if good_tracks:
-                trackrefs.extend(
-                    [
-                        Ref.track(
-                            uri=f"yt:video:{track['videoId']}",
-                            name=track["title"],
-                        )
-                        for track in good_tracks
-                        # if "videoId" in track and track["videoId"]
-                    ]
-                )
-
-                # include ytmusic data for all tracks as preload data in the uri
-                # for the first track.  There is surely a better way to do this.
-                # It breaks the first track in the musicbox_webclient
-                first_track = [
-                    track
-                    for track in good_tracks
-                    if f"yt:video:{track['videoId']}" == trackrefs[0].uri
-                ][0]
-
-                trackrefs[0] = Ref.track(
-                    uri=(
-                        f"yt:video:{first_track['videoId']}"
-                        f":preload:"
-                        f"{json.dumps([track for track in good_tracks if track is not None and len(track)>3])}"
-                    ),
-                    name=first_track["title"],
-                )
-
-            if good_albums:
-                trackrefs.extend(
-                    [
-                        Ref.album(
-                            uri=f"yt:playlist:{album['browseId']}",
-                            name=f"{', '.join([artist['name'] for artist in album['artists']])}, '{album['title']}'",
-                        )
-                        for album in good_albums
-                    ]
-                )
-
+        if tracks:
+            trackrefs = self.extract_trackrefs(tracks)
             return trackrefs
-
         else:
             logger.warn(f"There was a problem with uri {uri}")
-
         return []
+
+    def check_tracks(self, tracks):
+        good_tracks = []
+        good_albums = []
+        trackrefs = []
+
+        if tracks:
+            good_tracks = [
+                track
+                for track in tracks
+                if "videoId" in track
+                and track["videoId"]
+                and "title" in track
+                and track["title"]
+            ]
+
+            # good_tracks.extend(
+            #     [
+            #         dict(
+            #             video,
+            #             **{
+            #                 "videoId": video["videoDetails"]["videoId"],
+            #                 "title": video["videoDetails"]["title"],
+            #             },
+            #         )
+            #         for video in tracks
+            #         if "videoDetails" in video
+            #         and "videoId" in video["videoDetails"]
+            #         and video["videoDetails"]["videoId"]
+            #         and "title" in video["videoDetails"]
+            #         and video["videoDetails"]["title"]
+            #     ]
+            # )
+
+            good_albums = [
+                album
+                for album in tracks
+                if "type" in album
+                and album["type"] == "Album"
+                and album["browseId"]
+                and "title" in album
+                and album["title"]
+                and "artists" in album
+                and album["artists"]
+            ]
+        return good_tracks, good_albums
+
+    def extract_trackrefs(self, tracks):
+        trackrefs = []
+
+        good_tracks, good_albums = self.check_tracks(tracks)
+        if good_tracks:
+            trackrefs.extend(
+                [
+                    Ref.track(
+                        uri=f"yt:video:{track['videoId']}",
+                        name=track["title"],
+                    )
+                    for track in good_tracks
+                    # if "videoId" in track and track["videoId"]
+                ]
+            )
+
+            # include ytmusic data for all tracks as preload data in the uri
+            # for the first track.  There is surely a better way to do this.
+            # It breaks the first track in the musicbox_webclient
+            first_track = [
+                track
+                for track in good_tracks
+                if f"yt:video:{track['videoId']}" == trackrefs[0].uri
+            ][0]
+
+            trackrefs[0] = Ref.track(
+                uri=(
+                    f"yt:video:{first_track['videoId']}"
+                    f":preload:"
+                    f"{(json.dumps([track for track in good_tracks if track is not None and len(track)>3])).encode('utf-8').hex()}"
+                ),
+                name=first_track["title"],
+            )
+
+        if good_albums:
+            trackrefs.extend(
+                [
+                    Ref.album(
+                        uri=f"yt:playlist:{album['browseId']}",
+                        name=f"{', '.join([artist['name'] for artist in album['artists']])}, '{album['title']}'",
+                    )
+                    for album in good_albums
+                ]
+            )
+
+        return trackrefs
 
     def get_images(self, uris):
         images = {}
@@ -438,3 +446,46 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                         Image(uri=self.backend.services[service].service_image),
                     )
         return images
+
+    def lookup(self, uri):
+        uri = uri[8:]
+        if self.backend.services["spotify"].playlist_regex.match(uri):
+            unchecked_tracks = self.backend.services[
+                "spotify"
+            ].get_playlist_tracks(uri[-22:])
+        elif self.backend.services["applemusic"].playlistid_re.match(uri):
+            unchecked_tracks = self.backend.services[
+                "applemusic"
+            ].get_playlist_tracks(uri)
+        else:
+            return
+
+        good_tracks, good_albums = self.check_tracks(unchecked_tracks)
+
+        tracks = []
+
+        if good_tracks:
+            tracks.extend(
+                [
+                    Track(
+                        uri=f"yt:video:{track['videoId']}",
+                        name=track["title"],
+                        artists=[
+                            Artist(
+                                name=artist.get("name"),
+                                uri=f"yt:channel:{artist.get('id')}",
+                            )
+                            for artist in track.get("artists", {})
+                        ],
+                        album=Album(
+                            name=track.get("album", {}).get("name"),
+                            uri=f"yt:playlist:{track.get('album', {}).get('id')}",
+                        ),
+                        length=track.get("duration_seconds", 0),
+                        comment=track["videoId"],
+                        track_no=None,
+                    )
+                    for track in good_tracks
+                ]
+            )
+        return tracks

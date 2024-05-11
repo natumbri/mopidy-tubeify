@@ -37,11 +37,21 @@ class ServiceClient(Client):
         logger.warn("no service homepage, get_service_homepage")
         return
 
-    def _get_items_soup(self, endpoint, items_type="playlists"):
+    def _get_items_soup(self, endpoint, items_type=""):
+        schema = {}
+
         if items_type:
             schema = self.service_schema[items_type]
-        data = self.session.get(f"{self.service_endpoint}{endpoint}")
-        soup = bs(data.content.decode('utf-8'), "html5lib")  # is .content.decode('utf-8') always going to work?
+
+        if isinstance(endpoint, bs):
+            soup = endpoint
+
+        else:
+            data = self.session.get(f"{self.service_endpoint}{endpoint}")
+            soup = bs(
+                data.content.decode("utf-8"), "html5lib"
+            )  # is .content.decode('utf-8') always going to work?
+
         if soup:
             if "container" in schema:
                 soup = soup.find(

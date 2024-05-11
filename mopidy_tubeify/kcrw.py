@@ -50,7 +50,7 @@ class KCRW(ServiceClient):
             if match_PROGRAM:
                 logger.debug(f"matched program {match_PROGRAM['program']}")
                 program_episodes_list = self._get_items_soup(
-                    match_PROGRAM["program"]
+                    match_PROGRAM["program"], "playlists"
                 )
                 playlist_results = []
 

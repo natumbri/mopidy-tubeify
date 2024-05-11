@@ -174,7 +174,9 @@ class Amrap(ServiceClient):
             {"X-CSRF-Token": program_details["csrfToken"]}
         )
 
-        episode_url = f"{self.service_endpoint}/program/ajax-server/getEpisode.php"
+        episode_url = (
+            f"{self.service_endpoint}/program/ajax-server/getEpisode.php"
+        )
         episode_response = self.session.post(episode_url, data=program_details)
         episode_response_soup = bs(
             episode_response.content.decode("unicode-escape"),

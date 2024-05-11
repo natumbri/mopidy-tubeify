@@ -1,8 +1,6 @@
 import re
 import unicodedata
 
-from bs4 import BeautifulSoup as bs
-
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
@@ -20,6 +18,21 @@ class WhatHiFi(ServiceClient):
         "https://i.scdn.co/image/ab6775700000ee855f28402be2a38675edabae2b"
     )
     service_endpoint = "https://www.whathifi.com"
+    service_schema = {
+        "spotify_album_links": {
+            "item": {
+                "tag": "iframe",
+                "attrs": {"data-lazy-src": Spotify.album_regex},
+            }
+        },
+        "spotify_playlist_link": {
+            "container": {"tag": "a", "attrs": {"href": Spotify.playlist_regex}}
+        },
+        "testtracks": {
+            "container": {"tag": "div", "attrs": {"id": "article-body"}},
+            "item": {"tag": "li", "attrs": {}},
+        },
+    }
 
     # listoflists end up here
     def get_playlists_details(self, playlists):
@@ -27,23 +40,25 @@ class WhatHiFi(ServiceClient):
             return []
 
         if playlists[0] == "testtracks":
-            endpoint = f"{self.service_endpoint}/features/best-test-tracks-to-trial-your-hi-fi-system"
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib").find("div", id="article-body")
-            list_items = soup.find_all("li")
+            list_items = self._get_items_soup(
+                "/features/best-test-tracks-to-trial-your-hi-fi-system",
+                "testtracks",
+            )
             return [
                 {
                     "name": list_item.a.text,
-                    "id": list_item.a["href"],
+                    "id": list_item.a["href"].replace(
+                        self.service_endpoint, ""
+                    ),
                 }
                 for list_item in list_items
             ]
 
     def get_playlist_tracks(self, playlist):
-        data = self.session.get(playlist)
-        soup = bs(data.text, "html5lib")
-
-        spotify_playlist_link = soup.find("a", href=Spotify.playlist_regex)
+        soup = self._get_items_soup(playlist)
+        spotify_playlist_link = self._get_items_soup(
+            soup, "spotify_playlist_link"
+        )
         if spotify_playlist_link:
             spotify_playlist = Spotify.playlist_regex.match(
                 spotify_playlist_link["href"]
@@ -51,9 +66,7 @@ class WhatHiFi(ServiceClient):
             if spotify_playlist:
                 return Spotify.get_playlist_tracks(self, spotify_playlist[1])
 
-        spotify_album_links = soup.find_all(
-            "iframe", attrs={"data-lazy-src": Spotify.album_regex}
-        )
+        spotify_album_links = self._get_items_soup(soup, "spotify_album_links")
         if spotify_album_links:
             spotify_albums = [
                 Spotify.album_regex.match(spotify_album_link["data-lazy-src"])[

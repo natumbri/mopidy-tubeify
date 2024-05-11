@@ -16,16 +16,29 @@ class BestLiveAlbums(ServiceClient):
     service_schema = {
         "live-album-polls": {
             "container": {"tag": "article", "attrs": {}},
-            "item": {"tag": "ul", "attrs": {}}
+            "item": {"tag": "ul", "attrs": {}},
         },
         "lists-of-best-live-albums": {
             "container": {"tag": "div", "attrs": {"class": "entry-content"}},
-            "item": {"tag": "ol", "attrs": {}}
+            "item": {"tag": "ol", "attrs": {}},
         },
         "homepage": {
-            "container": {"tag": "div", "attrs": {"class": "menu-main-menu-container"}},
-            "item": {"tag": "li", "attrs": {"class": re.compile(r"menu-item.*")}}
-        }
+            "container": {
+                "tag": "div",
+                "attrs": {"class": "menu-main-menu-container"},
+            },
+            "item": {
+                "tag": "li",
+                "attrs": {"class": re.compile(r"menu-item.*")},
+            },
+        },
+        "poll": {"container": {"tag": "input", "attrs": {"name": "poll_id"}}},
+        "nonce": {
+            "container": {"tag": "input", "attrs": {"name": "wp-polls-nonce"}}
+        },
+        "album_artists": {
+            "container": {"tag": "span", "attrs": {"class": "tags-links"}}
+        },
     }
 
     def get_playlists_details(self, playlists):
@@ -50,11 +63,13 @@ class BestLiveAlbums(ServiceClient):
             return genres + artists
 
         if playlists == ["/lists-of-best-live-albums/"]:
-            soup = self._get_items_soup(playlists[0], "lists-of-best-live-albums")
+            soup = self._get_items_soup(
+                playlists[0], "lists-of-best-live-albums"
+            )
             return [
                 {
                     "name": ordered_list.findPrevious("strong").text,
-                    "id": f"list-{json.dumps(str(ordered_list))}",
+                    "id": f"list-{''.join(str(soup[0]).splitlines()).encode('utf-8').hex()}",  # hex-encode to avoid blowing up web intefaces
                 }
                 for ordered_list in soup
             ]
@@ -68,7 +83,10 @@ class BestLiveAlbums(ServiceClient):
         if re.match(r"^list-.*$", playlist):
             soup = [
                 li
-                for li in bs(playlist[6:-1], "html5lib").find_all("li")
+                for li in bs(
+                    (bytes.fromhex(playlist[5:])).decode("utf-8"),
+                    "html5lib",
+                ).find_all("li")
                 if li.find("a")
             ]
             albums = [
@@ -103,14 +121,11 @@ class BestLiveAlbums(ServiceClient):
             # on artist pages, you have to get the artist separately and
             # then apply it to each item on the list
             if match["kind"] in ["artist", "genre"]:
-                endpoint = f"{self.service_endpoint}{match['link']}"
-                data = self.session.get(endpoint)
-                soup = bs(data.content.decode("utf-8"), "html5lib")
-                poll = soup.find("input", attrs={"name": "poll_id"})["value"]
-                nonce = soup.find("input", attrs={"name": "wp-polls-nonce"})
-                album_artists = soup.find("span", attrs={"class": "tags-links"})
+                soup = self._get_items_soup(match["link"])
+                poll = self._get_items_soup(soup, "poll")["value"]
+                nonce = self._get_items_soup(soup, "nonce")
+                album_artists = self._get_items_soup(soup, "album_artists")
                 endpoint = f"{self.service_endpoint}/wp-admin/admin-ajax.php"
-
                 data = {
                     "action": "polls",
                     "view": "result",

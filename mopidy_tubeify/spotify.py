@@ -23,7 +23,6 @@ class Spotify(ServiceClient):
         r"https\:\/\/open\.spotify\.com\/embed\/track\/(.{22})"
     )
 
-
     service_uri = "spotify"
     service_name = "Spotify"
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/400px-Spotify_App_Logo.svg.png"
@@ -36,7 +35,6 @@ class Spotify(ServiceClient):
             }
         },
     }
-
 
     def get_spotify_headers(self, endpoint=r"https://open.spotify.com"):
         # # Getting the access token first to send it with the header to the api endpoint

@@ -1,6 +1,5 @@
 import re
 
-from bs4 import BeautifulSoup as bs
 from mopidy_youtube.data import extract_video_id as extract_yt_video_id
 
 from mopidy_tubeify import logger
@@ -10,10 +9,32 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 
 class TripleR(ServiceClient):
+    card_regex = re.compile("^card( .+)?$")
+
     service_uri = "tripler"
     service_name = "3RRR 102.7FM"
     service_image = "https://cdn-images-w3.rrr.org.au/1V_nPrxhwEWsjq5M5vV82UmmKwo=/600x600/filters:quality(85)/https://s3.ap-southeast-2.amazonaws.com/assets-w3.rrr.org.au/assets/091/a3b/6b5/091a3b6b51ac36547024c135434b0dacafd174d4/RRR-Facebook-Logo-White-Backg.jpg"
     service_endpoint = "https://www.rrr.org.au"
+    service_schema = {
+        "homepage": {
+            "item": {
+                "tag": "div",
+                "attrs": {"class": card_regex},
+            }
+        },
+        "playlist": {
+            "item": {
+                "tag": "li",
+                "attrs": {"class": "audio-summary__track clearfix"},
+            }
+        },
+        "program": {
+            "item": {
+                "tag": "div",
+                "attrs": {"class": card_regex},
+            }
+        },
+    }
 
     def get_playlists_details(self, playlists):
         def job(playlist):
@@ -22,12 +43,10 @@ class TripleR(ServiceClient):
             if match_PROGRAM:
                 logger.debug(f'matched "program" {playlist}')
                 programId = match_PROGRAM["programId"]
-                endpoint = f"{self.service_endpoint}/explore/programs/{programId}/episodes/page?page=1"
-                data = self.session.get(endpoint)
-                soup = bs(data.content.decode("utf-8"), "html5lib")
-
-                card_regex = re.compile("^card( .+)?$")
-                cards_soup = soup.find_all("div", class_=card_regex)
+                cards_soup = self._get_items_soup(
+                    f"/explore/programs/{programId}/episodes/page?page=1",
+                    "program",
+                )
 
                 # only bother with cards with View playlist button
                 cards_soup[:] = [
@@ -61,14 +80,7 @@ class TripleR(ServiceClient):
         if re.match(r"^PROGRAM\-(?P<programId>.+)$", playlist):
             return self.get_playlists_details([playlist])
 
-        endpoint = f"{self.service_endpoint}{playlist}"
-        data = self.session.get(endpoint)
-        soup = bs(data.text, "html5lib")
-
-        tracks_soup = soup.find_all(
-            "li", class_="audio-summary__track clearfix"
-        )
-
+        tracks_soup = self._get_items_soup(playlist, "playlist")
         tracks = [
             {
                 "song_name": track_soup.find(
@@ -91,13 +103,7 @@ class TripleR(ServiceClient):
         return search_and_get_best_match(tracks, self.ytmusic)
 
     def get_service_homepage(self):
-        endpoint = f"{self.service_endpoint}/explore/programs"
-        data = self.session.get(endpoint)
-        soup = bs(data.text, "html5lib")
-
-        card_regex = re.compile("^card( .+)?$")
-        cards_soup = soup.find_all("div", class_=card_regex)
-
+        cards_soup = self._get_items_soup("/explore/programs", "homepage")
         program_regex = re.compile(r"^/explore/programs/(?P<programId>.+)$")
         track_dicts = []
 

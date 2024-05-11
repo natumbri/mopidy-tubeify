@@ -23,9 +23,14 @@ class Discogs(ServiceClient):
             logger.debug(f'matched "discogs page:" {playlist}')
             playlist = match_DGP["dgppage"]
             endpoint = f"{self.service_endpoint}/digs/{playlist}"
-
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
+
+            new_url = re.findall(
+                r"cUPMDTk\:\ \"(?P<url>[^\"]*)\"", str(soup.find("script"))
+            )[0].replace(
+                "\/", "/"
+            )  # sometimes there is a 'please wait' catchpa
 
             filtered_items = soup.find_all("div", class_="release-block-text")
 
@@ -83,6 +88,7 @@ class Discogs(ServiceClient):
         return
 
     def get_service_homepage(self):
+        # this is derived from the "Load More" button on /digs/music/
         endpoint = r"https://content.discogs.com/digs/wp-admin/admin-ajax.php"
         divs = []
         i = 1
@@ -98,9 +104,21 @@ class Discogs(ServiceClient):
                     "filterValue": None,
                     "filterType": None,
                     "widgetBlockId": None,
-                    "wpnonce": None,
+                    "ultpUniqueIds": {
+                        "group1": [39886, 39881, 39869],
+                        "group2": [39886, 39881, 39749],
+                        "group3": [39881, 39671, 39587],
+                        "group4": [38866, 34047, 32915],
+                        "group5": [2175, 35809, 90],
+                    },
+                    "wpnonce": "22124a168b",
                 },
             ).text
+
+            if data == "0":
+                logger.warning("Discogs scrape failed")
+                raise Exception()  # this is broken
+
             soup = bs(data, "html5lib")
 
             divs += soup.find_all("div", attrs={"class": "ultp-block-content"})
