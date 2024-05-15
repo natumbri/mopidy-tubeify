@@ -43,7 +43,9 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.spotify_playlists = config["tubeify"]["spotify_playlists"]
         self.tidal_playlists = config["tubeify"]["tidal_playlists"]
         self.uri_schemes = ["tubeify"]
-        self.user_agent = "{}/{}".format(Extension.dist_name, Extension.version)
+        self.user_agent = "{}/{}".format(
+            Extension.dist_name, Extension.version
+        )
 
     def on_start(self):
         proxy = httpclient.format_proxy(self.config["proxy"])
@@ -431,9 +433,9 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             else:
                 identifier = None
             if service in self.backend.services:
-                if identifier and self.backend.services[service].uri_images.get(
-                    identifier
-                ):
+                if identifier and self.backend.services[
+                    service
+                ].uri_images.get(identifier):
                     images[uri] = (
                         Image(
                             uri=self.backend.services[service].uri_images[
@@ -443,24 +445,35 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     )
                 elif self.backend.services[service].service_image:
                     images[uri] = (
-                        Image(uri=self.backend.services[service].service_image),
+                        Image(
+                            uri=self.backend.services[service].service_image
+                        ),
                     )
         return images
 
     def lookup(self, uri):
-        uri = uri[8:]
-        if self.backend.services["spotify"].playlist_regex.match(uri):
-            unchecked_tracks = self.backend.services[
-                "spotify"
-            ].get_playlist_tracks(uri[-22:])
-        elif self.backend.services["applemusic"].playlistid_re.match(uri):
-            unchecked_tracks = self.backend.services[
-                "applemusic"
-            ].get_playlist_tracks(uri)
+        # for when service playlists are added using the web interface
+        # the web interface adds the playlist as "tubeify:[playlist url]"
+
+        uri = uri[8:]  # remove "tubeify:" from the uri
+        unchecked_tracks = []
+        
+        # for each service supported by the web interface (other than 
+        # youtube, which is processed directly by mopidy-youtube)
+        for service in ["spotify", "applemusic"]:
+            if playlistid := self.backend.services[
+                service
+            ].playlist_regex.match(uri):
+                # get_playlist_tracks takes the playlist id
+                unchecked_tracks = self.backend.services[
+                    service
+                ].get_playlist_tracks(playlistid["playlistid"])
+                break
+        
+        if unchecked_tracks:
+            good_tracks, good_albums = self.check_tracks(unchecked_tracks)
         else:
             return
-
-        good_tracks, good_albums = self.check_tracks(unchecked_tracks)
 
         tracks = []
 

@@ -7,6 +7,7 @@ from mopidy_tubeify.yt_matcher import (
     search_and_get_best_albums,
     search_and_get_best_match,
 )
+from mopidy_youtube.comms import Client
 
 
 class KEXP(ServiceClient):
@@ -26,6 +27,17 @@ class KEXP(ServiceClient):
             "item": {"tag": "div", "attrs": {"class": "home-playlist-song"}}
         },
     }
+
+    def __init__(self, proxy, headers, ytm_client):
+        # is this hack thing with headers necessary to get kexpeplorer to work consistently?
+        Client.__init__(
+            self,
+            proxy,
+            headers={
+                "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+            },
+        )
+        self.ytmusic = ytm_client
 
     def get_playlists_details(self, playlists):
         def job(playlist):

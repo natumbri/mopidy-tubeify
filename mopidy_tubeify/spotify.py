@@ -14,7 +14,7 @@ from mopidy_tubeify.yt_matcher import search_and_get_best_match
 
 class Spotify(ServiceClient):
     playlist_regex = re.compile(
-        r"https\:\/\/open\.spotify\.com\/.*\/?playlist\/(.{22})"
+        r"https\:\/\/open\.spotify\.com\/.*\/?playlist\/(?P<playlistid>.{22})"
     )
     album_regex = re.compile(
         r"https\:\/\/open\.spotify\.com\/embed\/album\/(.{22})"

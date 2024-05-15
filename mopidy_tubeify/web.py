@@ -2,7 +2,7 @@ import re
 import tornado.web
 from .spotify import Spotify
 from .apple import Apple
-
+from mopidy_youtube.data import extract_playlist_id as extract_youtube_playlist_id
 
 class WebHandler(tornado.web.RequestHandler):
     def initialize(self, config, core):
@@ -15,12 +15,26 @@ class WebHandler(tornado.web.RequestHandler):
             if Spotify.playlist_regex.match(url):
                 self.core.tracklist.add(uris=[f"tubeify:{url}"])
                 self.write(
-                    "<!DOCTYPE html><html><head><title>Spotify playlist Added</title><script>alert('Spotify playlist has been added.');window.history.back()</script></head></html>"
+                    "<!DOCTYPE html><html><head>"
+                    "<title>Spotify playlist Added</title>"
+                    "<script>alert('Spotify playlist has been added.');window.history.back()</script>"
+                    "</head></html>"
                 )
-            elif Apple.playlistid_re.match(url):
+            elif Apple.playlist_regex.match(url):
                 self.core.tracklist.add(uris=[f"tubeify:{url}"])
                 self.write(
-                    "<!DOCTYPE html><html><head><title>Apple playlist Added</title><script>alert('Apple playlist has been added.');window.history.back()</script></head></html>"
+                    "<!DOCTYPE html><html><head>"
+                    "<title>Apple playlist Added</title>"
+                    "<script>alert('Apple playlist has been added.');window.history.back()</script>"
+                    "</head></html>"
+                )
+            elif (playlist_id := extract_youtube_playlist_id(url)):
+                self.core.tracklist.add(uris=[f"yt:playlist:{playlist_id}"])
+                self.write(
+                    "<!DOCTYPE html><html><head>"
+                    "<title>Youtube playlist Added</title>"
+                    "<script>alert('Youtube playlist has been added.');window.history.back()</script>"
+                    "</head></html>"
                 )
             else:
                 self.write(
@@ -52,7 +66,7 @@ class WebHandler(tornado.web.RequestHandler):
       playlists to Mopidy from your web browser. 
     </p>
     <p>
-      Supported services: Spotify, Apple Music.
+      Supported services: Spotify, Apple Music, YouTube.
     </p>
   </div>
 

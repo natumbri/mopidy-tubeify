@@ -70,9 +70,13 @@ class AllMusic(ServiceClient):
                 name = meta.a.text
                 genre_id = f"listoflists-genre-{meta.a['href']}"
                 genre_details.append({"name": name, "id": genre_id})
-                self.uri_images[
-                    genre_id
-                ] = f"{self.service_endpoint}{genre.find('img')['src']}"
+                image = genre.find("img").get(
+                    "src", genre.find("img").get("data-src")
+                )
+                if image:
+                    self.uri_images[genre_id] = (
+                        f"{self.service_endpoint}{image}"
+                    )
             return genre_details
 
         elif playlists[0] == "editorschoice":
