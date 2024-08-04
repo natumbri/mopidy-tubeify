@@ -20,6 +20,17 @@ class Pitchfork(ServiceClient):
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Pitchfork_logo_symbol.svg/480px-Pitchfork_logo_symbol.svg.png"
     service_endpoint = "https://pitchfork.com"
 
+    service_schema = {
+        "albums": {
+            "item": {
+                "name": "script",
+                "string": re.compile(
+                    r"window\.__PRELOADED_STATE__\ \=\ (?P<json_data>.*)\;"
+                ),
+            },
+        },
+    }
+
     def get_playlists_details(self, playlists):
         match_LAG = re.match(r"^LAG\-(?P<ListAndGuidePage>.+)$", playlists[0])
         if match_LAG:
@@ -29,7 +40,18 @@ class Pitchfork(ServiceClient):
             data = self.session.get(endpoint)
             soup = bs(data.text, "html5lib")
             # links = soup.find_all("a", class_="title-link module__title-link")
-            lists = soup.find("section", class_="featured-lists").find_all("li")
+            # lists = soup.find("section", class_="featured-lists").find_all(
+            #     "li"
+            # )
+            lists = soup.find(
+                "div",
+                attrs={
+                    "data-testid": "SummaryRiverWrapper"
+                },  # "class": re.compile(r"summary-collection-grid")}
+            ).find_all(
+                "a", attrs={"class": re.compile(r"summary-item__hed-link")}
+            )
+            print([(listitem.text, listitem["href"]) for listitem in lists])
 
             list_dicts = []
 
@@ -87,59 +109,38 @@ class Pitchfork(ServiceClient):
         match_ARP = re.match(r"^ARP\-(?P<reviewPage>.+)$", playlist)
         if match_ARP:
             logger.debug(f'matched "album review page" {playlist}')
-            reviewPage = match_ARP["reviewPage"]
-            endpoint = f"{self.service_endpoint}/{reviewPage}"
-            data = self.session.get(endpoint)
-            soup = bs(data.text, "html5lib")
 
-            # script_re = re.compile(r"window\.App=(?P<json_data>.*);$")
-            # json_script = soup.find("script", string=script_re)
-            # json_data = json.loads(
-            #     script_re.match(json_script.text)["json_data"]
-            # )["context"]["dispatcher"]["stores"]["ReviewsStore"]["items"]
+            json_item = str(
+                self._get_items_soup(f"/{match_ARP['reviewPage']}", "albums")[
+                    0
+                ].contents
+            )
 
-            script_re = re.compile(r"window\.App\=(?P<json_data>.*);")
-            scripts = soup.body.find_all("script")
-            json_script = list(
-                filter(
-                    None,
-                    [
-                        script_re.search(str(script.contents))
-                        for script in scripts
-                    ],
-                )
-            )[0]
-            # json_data = json.loads(unidecode(json_script["json_data"]).encode().decode("unicode-escape"))["context"]["dispatcher"]["stores"]["ReviewsStore"]["items"]
+            json_script = self.service_schema["albums"]["item"][
+                "string"
+            ].search(json_item)
+
             json_data = json.loads(
                 unidecode(
                     (json_script["json_data"]).encode().decode("unicode-escape")
                 )
-            )["context"]["dispatcher"]["stores"]["ReviewsStore"]["items"]
+            )["transformed"]["bundle"]["containers"][0]["items"]
 
-            item_list = [
-                json_data[item]["tombstone"]["albums"][0]["album"]
+            # with open("/tmp/data.json", "w", encoding="utf-8") as f:
+            #     json.dump(
+            #         json_data,
+            #         f,
+            #         ensure_ascii=False,
+            #         indent=4,
+            #     )
+
+            albums = [
+                (
+                    [item.get("subHed", {}).get("name", "unknow")],
+                    item["source"]["hed"].replace("*", ""),
+                )
                 for item in json_data
             ]
-
-            albums = []
-
-            for item in item_list:
-                if not item["artists"]:
-                    logger.warn(
-                        f"expect wrong album: no artists listed for {item}"
-                    )
-                    item["artists"].append(
-                        {
-                            "display_name": "Unknown"
-                        }  # str(item["release_year"])}
-                    )
-
-                albums.append(
-                    (
-                        [artist["display_name"] for artist in item["artists"]],
-                        item["display_name"],
-                    )
-                )
 
             albums_to_return = search_and_get_best_albums(
                 [album for album in albums if album[1]], self.ytmusic
@@ -440,7 +441,7 @@ class Pitchfork(ServiceClient):
         track_dicts.append(
             {
                 "name": r"8.0+ Reviews",
-                "id": r"ARP-best/high-scoring-albums/?page=1",
+                "id": r"ARP-reviews/best/high-scoring-albums/?page=1",
             }
         )
 

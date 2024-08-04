@@ -25,15 +25,15 @@ class Apple(ServiceClient):
     service_schema = {
         "homepage": {
             "item": {
-                "tag": "li",
+                "name": "li",
                 "attrs": {
                     "role": "listitem",
                     "class": re.compile(r"shelf-grid__list-item"),
                 },
             },
         },
-        "playlist": {"container": {"tag": "title", "attrs": {}}},
-        "user": {"container": {"tag": "title", "attrs": {}}},
+        "playlist": {"container": {"name": "title", "attrs": {}}},
+        "user": {"container": {"name": "title", "attrs": {}}},
     }
 
     def get_applemusic_headers(self, endpoint=service_endpoint):
@@ -269,7 +269,9 @@ class Apple(ServiceClient):
         track_dicts = []
 
         for playlist in playlists:
-            playlistid = self.playlist_regex.match(playlist["attributes"]["url"])
+            playlistid = self.playlist_regex.match(
+                playlist["attributes"]["url"]
+            )
             if playlistid:
                 self.uri_images[playlistid["playlistid"]] = playlist[
                     "attributes"
@@ -282,3 +284,30 @@ class Apple(ServiceClient):
                 )
 
         return track_dicts
+
+
+if __name__ == "__main__":
+    headers = {
+        "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+    }
+    from ytmusicapi import YTMusic
+
+    scraper = Apple(None, headers, YTMusic())
+
+    homepage = scraper.get_service_homepage()
+    print(homepage)
+    # print(homepage[0])
+    # print([homepage[0]["id"]])
+    # gpd = scraper.get_playlists_details([homepage[0]["id"]])
+    # print(gpd)
+    # print(gpd[0]["id"])
+    # gpt = scraper.get_playlist_tracks(gpd[0]["id"])
+    # print(gpt)
+    # # gpt = scraper.get_playlist_tracks(
+    # #     "bad-bunny-essentials/pl.1c35ac10cfe848aaa19f68ebe62ea46e"
+    # # )
+    # # print(gpt)
+    # # print(scraper.get_playlist_tracks(gpt[0]['id']))
+
+    # # gud = scraper.get_users_details(["npr-music/1437679561"])
+    # # print(gud)

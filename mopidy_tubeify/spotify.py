@@ -30,7 +30,7 @@ class Spotify(ServiceClient):
     service_schema = {
         "embeded_playlist": {
             "container": {
-                "tag": "iframe",
+                "name": "iframe",
                 "attrs": {"src": playlist_regex},
             }
         },
@@ -40,9 +40,12 @@ class Spotify(ServiceClient):
         # # Getting the access token first to send it with the header to the api endpoint
 
         # use temporary token from website
-        page = self.session.get(f"{endpoint}/__noul__")
+        headers = {
+            "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+        }
+        page = self.session.get(f"{endpoint}/__noul__", headers=headers)
         soup = bs(page.text, "html.parser")
-        access_token_tag = soup.find("script", text=re.compile("accessToken"))
+        access_token_tag = soup.find("script", string=re.compile("accessToken"))
         json_obj = json.loads(access_token_tag.contents[0])
         token = {"access_token": json_obj["accessToken"]}
 
@@ -162,8 +165,8 @@ class Spotify(ServiceClient):
 
     def get_service_homepage(self):
         self.get_spotify_headers()
-        endpoint = f"{Spotify.service_endpoint}/v1/views/desktop-home"
-
+        # endpoint = f"{Spotify.service_endpoint}/v1/views/desktop-home"  # broken?
+        endpoint = f"{Spotify.service_endpoint}/v1/browse/featured-playlists"
         data = self.session.get(endpoint).json()
         playlists = list(find_in_obj(data, "type", "playlist"))
 
@@ -177,3 +180,27 @@ class Spotify(ServiceClient):
             {"name": playlist["name"], "id": playlist["id"]}
             for playlist in playlists
         ]
+
+
+if __name__ == "__main__":
+    headers = {
+        "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+    }
+    from ytmusicapi import YTMusic
+
+    test_user = "dolae62cfhl7qb5dq75ejmsxo"
+    test_playlist = "5gQUvUR3g3msxuCZS3wAzb"
+
+    scraper = Spotify(None, headers, YTMusic())
+    print(scraper.session.headers)
+
+    homepage = scraper.get_service_homepage()
+    print(homepage)
+    gpd = scraper.get_playlists_details([homepage[0]["id"]])
+    print(gpd)
+    gpt = scraper.get_playlist_tracks(gpd[0]["id"])
+    print(gpt)
+    gud = scraper.get_users_details([test_user])
+    print(gud)
+    gup = scraper.get_user_playlists(test_user)
+    print(gup)

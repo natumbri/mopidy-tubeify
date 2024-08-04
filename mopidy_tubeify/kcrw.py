@@ -15,7 +15,7 @@ class KCRW(ServiceClient):
     service_schema = {
         "episode_playlist": {
             "container": {
-                "tag": "div",
+                "name": "div",
                 "attrs": {
                     "class": "tracklist_container",
                     "id": "playlist-entries",
@@ -23,12 +23,12 @@ class KCRW(ServiceClient):
             },
         },
         "playlists": {
-            "container": {"tag": "div", "attrs": {"id": "episodes"}},
-            "item": {"tag": "div", "attrs": {"class": "single episode-Item"}},
+            "container": {"name": "div", "attrs": {"id": "episodes"}},
+            "item": {"name": "div", "attrs": {"class": "single episode-Item"}},
         },
         "shows": {
             "item": {
-                "tag": "a",
+                "name": "a",
                 "attrs": {
                     "class": "single",
                     "data-filter-data": re.compile(

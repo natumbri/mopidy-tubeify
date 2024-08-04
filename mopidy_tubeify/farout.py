@@ -12,7 +12,7 @@ class FarOut(ServiceClient):
     service_endpoint = "https://faroutmagazine.co.uk"
     service_schema = {
         "musicplaylists": {
-            "container": {"tag": "div", "attrs": {"class": "content"}},
+            "container": {"name": "div", "attrs": {"class": "content"}},
         },
         "embeded_spotify_playlist": Spotify.service_schema["embeded_playlist"],
     }

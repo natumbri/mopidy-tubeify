@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup as bs
 from mopidy_youtube.comms import Client
 
 from mopidy_tubeify import logger
+import re
 
 
 class ServiceClient(Client):
@@ -54,14 +55,10 @@ class ServiceClient(Client):
 
         if soup:
             if "container" in schema:
-                soup = soup.find(
-                    schema["container"]["tag"],
-                    attrs=schema["container"]["attrs"],
-                )
+                soup = soup.find(**schema["container"])
+
         if soup:
             if "item" in schema:
-                soup = soup.find_all(
-                    schema["item"]["tag"], attrs=schema["item"]["attrs"]
-                )
+                soup = soup.find_all(**schema["item"])
             return soup
         return []

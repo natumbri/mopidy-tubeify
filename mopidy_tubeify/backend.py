@@ -43,9 +43,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         self.spotify_playlists = config["tubeify"]["spotify_playlists"]
         self.tidal_playlists = config["tubeify"]["tidal_playlists"]
         self.uri_schemes = ["tubeify"]
-        self.user_agent = "{}/{}".format(
-            Extension.dist_name, Extension.version
-        )
+        self.user_agent = "{}/{}".format(Extension.dist_name, Extension.version)
 
     def on_start(self):
         proxy = httpclient.format_proxy(self.config["proxy"])
@@ -433,9 +431,9 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
             else:
                 identifier = None
             if service in self.backend.services:
-                if identifier and self.backend.services[
-                    service
-                ].uri_images.get(identifier):
+                if identifier and self.backend.services[service].uri_images.get(
+                    identifier
+                ):
                     images[uri] = (
                         Image(
                             uri=self.backend.services[service].uri_images[
@@ -445,9 +443,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     )
                 elif self.backend.services[service].service_image:
                     images[uri] = (
-                        Image(
-                            uri=self.backend.services[service].service_image
-                        ),
+                        Image(uri=self.backend.services[service].service_image),
                     )
         return images
 
@@ -457,8 +453,8 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
 
         uri = uri[8:]  # remove "tubeify:" from the uri
         unchecked_tracks = []
-        
-        # for each service supported by the web interface (other than 
+
+        # for each service supported by the web interface (other than
         # youtube, which is processed directly by mopidy-youtube)
         for service in ["spotify", "applemusic"]:
             if playlistid := self.backend.services[
@@ -469,7 +465,7 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
                     service
                 ].get_playlist_tracks(playlistid["playlistid"])
                 break
-        
+
         if unchecked_tracks:
             good_tracks, good_albums = self.check_tracks(unchecked_tracks)
         else:

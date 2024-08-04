@@ -18,43 +18,43 @@ class AllMusic(ServiceClient):
     service_schema = {
         "albums": {
             "container": {
-                "tag": "div",
+                "name": "div",
                 "attrs": {"id": "descriptorAlbumHighlights"},
             },
-            "item": {"tag": "div", "attrs": {"class": "singleGenreAlbum"}},
+            "item": {"name": "div", "attrs": {"class": "singleGenreAlbum"}},
         },
         "genre": {
-            "container": {"tag": "div", "attrs": {"class": "desktopOnly"}},
-            "item": {"tag": "a", "attrs": {"class": "genre-links"}},
+            "container": {"name": "div", "attrs": {"class": "desktopOnly"}},
+            "item": {"name": "a", "attrs": {"class": "genre-links"}},
         },
         "genres": {
-            "container": {"tag": "div", "attrs": {"id": "allGenresGrid"}},
-            "item": {"tag": "div", "attrs": {"class": "gridItem"}},
+            "container": {"name": "div", "attrs": {"id": "allGenresGrid"}},
+            "item": {"name": "div", "attrs": {"class": "gridItem"}},
         },
         "editorschoice": {
-            "container": {"tag": "select", "attrs": {"name": "year-filter"}},
-            "item": {"tag": "option", "attrs": {}},
+            "container": {"name": "select", "attrs": {"name": "year-filter"}},
+            "item": {"name": "option", "attrs": {}},
         },
         "EC-yyyy": {
-            "container": {"tag": "select", "attrs": {"name": "month-filter"}},
-            "item": {"tag": "option", "attrs": {}},
+            "container": {"name": "select", "attrs": {"name": "month-filter"}},
+            "item": {"name": "option", "attrs": {}},
         },
         "ECMY": {
-            "item": {"tag": "div", "attrs": {"class": "editorsChoiceItem"}}
+            "item": {"name": "div", "attrs": {"class": "editorsChoiceItem"}}
         },
         "FeaturedNewRelease": {
-            "item": {"tag": "div", "attrs": {"class": "newReleaseItem"}}
+            "item": {"name": "div", "attrs": {"class": "newReleaseItem"}}
         },
         "newreleases": {
-            "container": {"tag": "select", "attrs": {"name": "week-filter"}},
-            "item": {"tag": "option", "attrs": {}},
+            "container": {"name": "select", "attrs": {"name": "week-filter"}},
+            "item": {"name": "option", "attrs": {}},
         },
         "songs": {
             "container": {
-                "tag": "div",
+                "name": "div",
                 "attrs": {"id": "descriptorSongHighlights"},
             },
-            "item": {"tag": "div", "attrs": {"class": "songRow"}},
+            "item": {"name": "div", "attrs": {"class": "songRow"}},
         },
     }
 
@@ -127,17 +127,10 @@ class AllMusic(ServiceClient):
 
             return [
                 {
-                    "name": "Artists",
-                    "id": f"artists-{endpoint}/artists",
-                },
-                {
-                    "name": "Albums",
-                    "id": f"albums-{endpoint}/albums",
-                },
-                {
-                    "name": "Songs",
-                    "id": f"songs-{endpoint}/songs",
-                },
+                    "name": name,
+                    "id": f"{name.lower()}-{endpoint}/{name.lower()}",
+                }
+                for name in ["Artists", "Albums", "Songs"]
             ] + subgenres
 
     def get_playlist_tracks(self, playlist):

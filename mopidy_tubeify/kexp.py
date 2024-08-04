@@ -17,14 +17,14 @@ class KEXP(ServiceClient):
     service_endpoint = "http://www.kexplorer.com"
     service_schema = {
         "dj": {
-            "container": {"tag": "ul", "attrs": {"id": "chart-list"}},
-            "item": {"tag": "a", "attrs": {}},
+            "container": {"name": "ul", "attrs": {"id": "chart-list"}},
+            "item": {"name": "a", "attrs": {}},
         },
         "homepage": {
-            "item": {"tag": "div", "attrs": {"class": "listener-info"}}
+            "item": {"name": "div", "attrs": {"class": "listener-info"}}
         },
         "playlist": {
-            "item": {"tag": "div", "attrs": {"class": "home-playlist-song"}}
+            "item": {"name": "div", "attrs": {"class": "home-playlist-song"}}
         },
     }
 

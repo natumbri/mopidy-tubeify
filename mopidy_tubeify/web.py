@@ -1,8 +1,11 @@
 import re
 import tornado.web
-from .spotify import Spotify
-from .apple import Apple
-from mopidy_youtube.data import extract_playlist_id as extract_youtube_playlist_id
+from mopidy_tubeify.spotify import Spotify
+from mopidy_tubeify.apple import Apple
+from mopidy_youtube.data import (
+    extract_playlist_id as extract_youtube_playlist_id,
+)
+
 
 class WebHandler(tornado.web.RequestHandler):
     def initialize(self, config, core):
@@ -28,7 +31,7 @@ class WebHandler(tornado.web.RequestHandler):
                     "<script>alert('Apple playlist has been added.');window.history.back()</script>"
                     "</head></html>"
                 )
-            elif (playlist_id := extract_youtube_playlist_id(url)):
+            elif playlist_id := extract_youtube_playlist_id(url):
                 self.core.tracklist.add(uris=[f"yt:playlist:{playlist_id}"])
                 self.write(
                     "<!DOCTYPE html><html><head>"

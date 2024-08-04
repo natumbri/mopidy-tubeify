@@ -18,19 +18,19 @@ class TripleR(ServiceClient):
     service_schema = {
         "homepage": {
             "item": {
-                "tag": "div",
+                "name": "div",
                 "attrs": {"class": card_regex},
             }
         },
         "playlist": {
             "item": {
-                "tag": "li",
+                "name": "li",
                 "attrs": {"class": "audio-summary__track clearfix"},
             }
         },
         "program": {
             "item": {
-                "tag": "div",
+                "name": "div",
                 "attrs": {"class": card_regex},
             }
         },

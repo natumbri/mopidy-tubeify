@@ -21,16 +21,19 @@ class WhatHiFi(ServiceClient):
     service_schema = {
         "spotify_album_links": {
             "item": {
-                "tag": "iframe",
+                "name": "iframe",
                 "attrs": {"data-lazy-src": Spotify.album_regex},
             }
         },
         "spotify_playlist_link": {
-            "container": {"tag": "a", "attrs": {"href": Spotify.playlist_regex}}
+            "container": {
+                "name": "a",
+                "attrs": {"href": Spotify.playlist_regex},
+            }
         },
         "testtracks": {
-            "container": {"tag": "div", "attrs": {"id": "article-body"}},
-            "item": {"tag": "li", "attrs": {}},
+            "container": {"name": "div", "attrs": {"id": "article-body"}},
+            "item": {"name": "li"},
         },
     }
 

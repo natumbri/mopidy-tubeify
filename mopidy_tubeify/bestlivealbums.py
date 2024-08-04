@@ -15,29 +15,29 @@ class BestLiveAlbums(ServiceClient):
     service_endpoint = "http://www.bestlivealbums.com"
     service_schema = {
         "live-album-polls": {
-            "container": {"tag": "article", "attrs": {}},
-            "item": {"tag": "ul", "attrs": {}},
+            "container": {"name": "article", "attrs": {}},
+            "item": {"name": "ul", "attrs": {}},
         },
         "lists-of-best-live-albums": {
-            "container": {"tag": "div", "attrs": {"class": "entry-content"}},
-            "item": {"tag": "ol", "attrs": {}},
+            "container": {"name": "div", "attrs": {"class": "entry-content"}},
+            "item": {"name": "ol", "attrs": {}},
         },
         "homepage": {
             "container": {
-                "tag": "div",
+                "name": "div",
                 "attrs": {"class": "menu-main-menu-container"},
             },
             "item": {
-                "tag": "li",
+                "name": "li",
                 "attrs": {"class": re.compile(r"menu-item.*")},
             },
         },
-        "poll": {"container": {"tag": "input", "attrs": {"name": "poll_id"}}},
+        "poll": {"container": {"name": "input", "attrs": {"name": "poll_id"}}},
         "nonce": {
-            "container": {"tag": "input", "attrs": {"name": "wp-polls-nonce"}}
+            "container": {"name": "input", "attrs": {"name": "wp-polls-nonce"}}
         },
         "album_artists": {
-            "container": {"tag": "span", "attrs": {"class": "tags-links"}}
+            "container": {"name": "span", "attrs": {"class": "tags-links"}}
         },
     }
 

@@ -16,19 +16,22 @@ class NPR(ServiceClient):
     service_image = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/NPR_Music_logo.jpg/480px-NPR_Music_logo.jpg"
     service_endpoint = "https://www.npr.org"
     service_schema = {
-        "bxox": {"container": {"tag": "div", "attrs": {"class": "subtopics"}}},
+        "bxox": {"container": {"name": "div", "attrs": {"class": "subtopics"}}},
         "embeded_spotify_playlist": Spotify.service_schema["embeded_playlist"],
         "nmf": {
-            "container": {"tag": "div", "attrs": {"id": "storytext"}},
-            "item": {"tag": "li", "attrs": {}},
+            "container": {"name": "div", "attrs": {"id": "storytext"}},
+            # "item": {"tag": "li", "attrs": {}},  # it seems that nmf pages are just text lists with numbers or dots; not html lists
         },
-        "nprjson": {"item": {"tag": "h6", "attrs": {}}},
+        "nprjson": {"item": {"name": "h6", "attrs": {}}},
         "nprpl": {
-            "item": {"tag": "article", "attrs": {"class": re.compile(r"item")}},
+            "item": {
+                "name": "article",
+                "attrs": {"class": re.compile(r"item")},
+            },
         },
         "plarchive": {
-            "container": {"tag": "nav", "attrs": {"class": "archive-nav"}},
-            "item": {"tag": "li", "attrs": {}},
+            "container": {"name": "nav", "attrs": {"class": "archive-nav"}},
+            "item": {"name": "li", "attrs": {}},
         },
     }
 
@@ -115,39 +118,60 @@ class NPR(ServiceClient):
             return search_and_get_best_match(tracks, self.ytmusic)
 
         matchNMF = re.match(
-            r"^https\:\/\/www\.npr\.org\/\d{4}\/\d{2}/\d{2}\/\d{10}\/new-music-friday.*$",
+            # r"^https\:\/\/www\.npr\.org\/\d{4}\/\d{2}/\d{2}\/\d{10}\/new-music-friday.*$",
+            r"^.*new-music-friday.*$",
             playlist,
         )
+        print(matchNMF)
         if matchNMF:
             albums_list = []
             albums_soup = self._get_items_soup(
                 playlist.replace(self.service_endpoint, ""), "nmf"
             )
-            for album in albums_soup:
-                try:
-                    album_name = album.em.extract().text.strip()
-                    album_artist = re.split("— |- |, ", album.text)[0].strip()
-                    albums_list.append((album_artist, album_name))
-                except Exception as e:
-                    logger.debug(
-                        f"error {e} with NMF album {str(album)} on {playlist}"
-                    )
+
+            albums_list = re.findall(
+                r"(?:\d\.|•) (?P<artist>[^<]+), <em>(?P<album>[^<]+)<",
+                str(albums_soup),
+            )
+
+            # for album in albums_soup:
+            #     try:
+            #         album_name = album.em.extract().text.strip()
+            #         album_artist = re.split("— |- |, ", album.text)[0].strip()
+            #         albums_list.append((album_artist, album_name))
+            #     except Exception as e:
+            #         logger.debug(
+            #             f"error {e} with NMF album {str(album)} on {playlist}"
+            #         )
 
             albums_to_return = search_and_get_best_albums(
                 albums_list, self.ytmusic
             )
 
-            return list(flatten(albums_to_return))
+            if albums_to_return:
+                return list(flatten(albums_to_return))
 
         # some NPR pages have their playlists as spotify playlists (and Apple Music playlists)
-        # so, use those
-        spotify_playlist = Spotify.playlist_regex.match(
-            self._get_items_soup(playlist, "embeded_spotify_playlist")["src"]
-        )[1]
+        # so, use those.  But the new music friday playlist is a single playlist
+        # that is updated each week - so you can't use it to see previous weeks
 
-        if spotify_playlist:
-            # hopefully, this isn't a terrible idea...
-            return Spotify.get_playlist_tracks(self, spotify_playlist)
+        # spotify_playlist = Spotify.playlist_regex.match(
+        #     self._get_items_soup(playlist, "embeded_spotify_playlist")["src"]
+        # )[1]
+
+        # if spotify_playlist:
+        #     # hopefully, this isn't a terrible idea...
+        #     return Spotify.get_playlist_tracks(self, spotify_playlist)
+
+        if embeded_spotify_playlist := self._get_items_soup(
+            playlist, "embeded_spotify_playlist"
+        ):
+            return Spotify.get_playlist_tracks(
+                self,
+                Spotify.playlist_regex.match(embeded_spotify_playlist["src"])[
+                    1
+                ],
+            )
 
     def get_service_homepage(self):
         # future: programatically generate album and song lists from
