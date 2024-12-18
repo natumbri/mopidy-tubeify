@@ -138,7 +138,7 @@ def search_and_get_best_album(artists_albumtitle, ytmusic):
 
     result = check_album(artists_albumtitle, album_info_results)
 
-    if not result:
+    if artists_albumtitle[1] and not result:
         # chuck in a couple of title only, might help.
         album_info_results = get_albums(f"{artists_albumtitle[1]}", types)
         result = check_album(artists_albumtitle, album_info_results)
