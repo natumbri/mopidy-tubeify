@@ -2,8 +2,7 @@ from bs4 import BeautifulSoup as bs
 from mopidy_youtube.comms import Client
 
 from mopidy_tubeify import logger
-import re
-
+from requests.models import Response
 
 class ServiceClient(Client):
     service_uri = None
@@ -46,7 +45,10 @@ class ServiceClient(Client):
 
         if isinstance(endpoint, bs):
             soup = endpoint
-
+        elif isinstance(endpoint, Response):
+            soup = bs(
+                endpoint.content.decode("utf-8"), "html5lib"
+            )
         else:
             data = self.session.get(f"{self.service_endpoint}{endpoint}")
             soup = bs(
