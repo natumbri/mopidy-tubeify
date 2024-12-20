@@ -3,7 +3,6 @@ import re
 
 from bs4 import BeautifulSoup as bs
 
-from mopidy_tubeify import logger
 from mopidy_tubeify.data import find_in_obj
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match

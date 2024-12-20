@@ -201,6 +201,7 @@ class WhatHiFi(ServiceClient):
                 .strip()
             )
         except Exception as e:
+            logger.warn(f"error extracting section: {e}")
             return "[item loading]"
 
     def _extract_title(self, item):

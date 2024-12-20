@@ -1,4 +1,3 @@
-import re
 import tornado.web
 from mopidy_tubeify.spotify import Spotify
 from mopidy_tubeify.apple import Apple
@@ -65,8 +64,8 @@ class WebHandler(tornado.web.RequestHandler):
 <body><div class="box focus">
     <h1>Mopidy-Tubeify</h1>
     <p>
-      The purpose of this webclient is to be able to easily add music service  
-      playlists to Mopidy from your web browser. 
+      The purpose of this webclient is to be able to easily add music service
+      playlists to Mopidy from your web browser.
     </p>
     <p>
       Supported services: Spotify, Apple Music, YouTube.
@@ -95,7 +94,7 @@ class WebHandler(tornado.web.RequestHandler):
         </script>
       <p>
         <h3>Why is this here?</h3>
-        <p>Copy the above snippet, and create a bookmark in your web browser with the snippet as the URL. 
+        <p>Copy the above snippet, and create a bookmark in your web browser with the snippet as the URL.
            When you're browsing a supported music service, you can simply click that bookmark to add the current page to Mopidy.</p>
       </p>
     </div>

@@ -70,12 +70,12 @@ class NPR(ServiceClient):
 
             # did we get here from the homepage?
             if playlists[0] == "NPR100BSO2022":
-                endpoint = f"/2022/12/15/1135802083/100-best-songs-2022-page-1"
+                endpoint = "/2022/12/15/1135802083/100-best-songs-2022-page-1"
                 idPrefix = "BSOx"
                 page1 = [{"name": "100-81", "id": f"{idPrefix}-{endpoint}"}]
 
             elif playlists[0] == "NPR50BAO2022":
-                endpoint = f"/2022/12/12/1134898067/50-best-albums-2022-page-1"
+                endpoint = "/2022/12/12/1134898067/50-best-albums-2022-page-1"
                 idPrefix = "BAOx"
                 page1 = [{"name": "50-41", "id": f"{idPrefix}-{endpoint}"}]
 
