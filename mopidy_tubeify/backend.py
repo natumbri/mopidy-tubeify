@@ -11,13 +11,13 @@ from mopidy_tubeify import Extension, logger
 from mopidy_tubeify.allmusic import AllMusic
 from mopidy_tubeify.amrap import Amrap
 from mopidy_tubeify.apple import Apple
-from mopidy_tubeify.bestlivealbums import BestLiveAlbums
+# from mopidy_tubeify.bestlivealbums import BestLiveAlbums
 from mopidy_tubeify.data import extract_playlist_id, extract_user_id
 from mopidy_tubeify.discogs import Discogs
 from mopidy_tubeify.farout import FarOut
 from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.kexp import KEXP
-from mopidy_tubeify.lastfm import LastFM
+# from mopidy_tubeify.lastfm import LastFM
 from mopidy_tubeify.musicreviewworld import MusicReviewWorld
 from mopidy_tubeify.nme import NME
 from mopidy_tubeify.npr import NPR
@@ -62,7 +62,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
         standard_services = [
             AllMusic,
             Apple,
-            BestLiveAlbums,
+            # BestLiveAlbums,
             Discogs,
             FarOut,
             KCRW,
@@ -82,7 +82,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             for service in standard_services
         }
 
-        authenticated_services = []  #  [LastFM]
+        authenticated_services = []  # [LastFM]
 
         [
             self.services.update(
@@ -324,7 +324,6 @@ class TubeifyLibraryProvider(backend.LibraryProvider):
     def check_tracks(self, tracks):
         good_tracks = []
         good_albums = []
-        trackrefs = []
 
         if tracks:
             good_tracks = [

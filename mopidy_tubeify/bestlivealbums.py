@@ -1,4 +1,4 @@
-import json
+# Website has disappeared as of 2024-12-20
 import re
 
 from bs4 import BeautifulSoup as bs
