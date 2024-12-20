@@ -1,0 +1,17 @@
+*.pyc
+/.coverage
+/.mypy_cache/
+/.pytest_cache/
+/.tox/
+/*.egg-info
+/build/
+/dist/
+/MANIFEST
+build/
+contacts/
+dist/
+mopidy-youtube.Rproj
+.Rproj.user
+.Rhistory
+.RData
+__pycache__/
