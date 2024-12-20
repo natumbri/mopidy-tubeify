@@ -1,18 +1,8 @@
-# import json
 import re
-
-from bs4 import BeautifulSoup as bs
-
-# from urllib.parse import unquote
 from unidecode import unidecode
-
 from mopidy_tubeify import logger
-
-# from mopidy_tubeify.data import find_in_obj
 from mopidy_tubeify.serviceclient import ServiceClient
 from mopidy_tubeify.yt_matcher import search_and_get_best_match
-
-# from mopidy_youtube.timeformat import ISO8601_to_seconds
 
 
 class Apple(ServiceClient):
@@ -27,21 +17,21 @@ class Apple(ServiceClient):
             "item": {
                 "name": "li",
                 "attrs": {
-                    "role": "listitem",
+                    # "role": "listitem",
                     "class": re.compile(r"shelf-grid__list-item"),
                 },
             },
         },
         "playlist": {"container": {"name": "title", "attrs": {}}},
+        "script": {
+            "container": {"name": "script", "attrs": {"type": "module"}}
+        },
         "user": {"container": {"name": "title", "attrs": {}}},
     }
 
     def get_applemusic_headers(self, endpoint=service_endpoint):
         # Getting the access token first to send it with the header to the api endpoint
-        page = self.session.get(f"{endpoint}/browse")
-        soup = bs(page.content.decode("utf-8"), "html.parser")
-        # logger.debug(f"get_applemusic_headers base url: {endpoint}")
-        js = soup.find("script", attrs={"type": "module"})
+        js = self._get_items_soup("/browse", "script")
         page = self.session.get(f"{endpoint}/{js['src']}")
 
         # is the access token always a 268 character long constant

@@ -1,10 +1,6 @@
 import json
 import re
-from concurrent.futures.thread import ThreadPoolExecutor
-
-from bs4 import BeautifulSoup as bs
 from unidecode import unidecode
-
 from mopidy_tubeify import logger
 from mopidy_tubeify.data import flatten
 from mopidy_tubeify.serviceclient import ServiceClient
@@ -135,7 +131,6 @@ class Pitchfork(ServiceClient):
             ]
             return search_and_get_best_match(tracks, self.ytmusic)
 
-
     def get_service_homepage(self):
         track_dicts = []
 
@@ -258,4 +253,3 @@ if __name__ == "__main__":
     print(gpd[4]["id"])
     gpt = scraper.get_playlist_tracks(gpd[4]["id"])
     print(gpt)
-
