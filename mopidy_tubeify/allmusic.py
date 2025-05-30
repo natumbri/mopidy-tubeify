@@ -43,7 +43,7 @@ class AllMusic(ServiceClient):
             "item": {"name": "div", "attrs": {"class": "editorsChoiceItem"}}
         },
         "FeaturedNewRelease": {
-            "item": {"name": "div", "attrs": {"class": "newReleaseItem"}}
+            "item": {"name": "article", "attrs": {"class": "newReleaseItem"}}
         },
         "newreleases": {
             "container": {"name": "select", "attrs": {"name": "week-filter"}},
@@ -139,11 +139,11 @@ class AllMusic(ServiceClient):
         # deal with featured new releases pages
         match_FNR = re.match(r"^FNR\-(?P<FNRdate>.+)$", playlist)
         if match_FNR:
+
             logger.debug(f'matched "featured new release" {playlist}')
             page_albums_filter = self._get_items_soup(
                 f"/newreleases/{match_FNR['FNRdate']}", "FeaturedNewRelease"
             )
-
         match_ECMY = re.match(r"^ECMY\-(?P<albumsURL>.+)$", playlist)
         if match_ECMY:
             logger.debug(f'matched "editors choice month-year" {playlist}')
@@ -171,10 +171,10 @@ class AllMusic(ServiceClient):
         if page_albums_filter:
             albums = [
                 (
-                    page_album.find("div", class_="artist")
+                    page_album.find(class_="artist")
                     .text.strip()
                     .split(" / "),
-                    page_album.find("div", class_="title").text.strip(),
+                    page_album.find(class_="title").text.strip(),
                 )
                 for page_album in page_albums_filter
             ]
@@ -219,3 +219,19 @@ class AllMusic(ServiceClient):
             + [{"name": "Genres", "id": "listoflists-genres"}]
             + [{"name": "Editors' Choice", "id": "listoflists-editorschoice"}]
         )
+if __name__ == "__main__":
+    headers = {
+        "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+    }
+    from ytmusicapi import YTMusic
+
+    scraper = AllMusic(None, headers, YTMusic())
+    homepage = scraper.get_service_homepage()
+    print(homepage)
+    print([homepage[0]["id"]])
+    gpd = scraper.get_playlist_tracks(homepage[0]["id"])
+    print(gpd)
+    # gpd = scraper.get_playlists_details([gpd[2]["id"][12:]])
+    # print(gpd)
+    # gpt = scraper.get_playlist_tracks(gpd[0]["id"])
+    # print(gpt)
