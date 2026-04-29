@@ -55,6 +55,9 @@ class ServiceClient(Client):
                 data.content.decode("utf-8"), "html5lib"
             )  # is .content.decode('utf-8') always going to work?
 
+        # with open('/tmp/output.html', 'w', encoding='utf-8') as file:
+        #     file.write(str(soup))
+
         if soup:
             if "container" in schema:
                 soup = soup.find(**schema["container"])

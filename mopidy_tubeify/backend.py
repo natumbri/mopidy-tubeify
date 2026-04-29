@@ -66,7 +66,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             # BestLiveAlbums,
             Discogs,
             FarOut,
-            FMSpins,
+            # FMSpins,  # authenticated, now
             KCRW,
             # KEXP,
             MusicReviewWorld,
@@ -84,7 +84,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             for service in standard_services
         }
 
-        authenticated_services = []  # [LastFM]
+        authenticated_services = [FMSpins]  # [LastFM]
 
         [
             self.services.update(

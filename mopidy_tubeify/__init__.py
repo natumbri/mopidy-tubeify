@@ -21,8 +21,12 @@ class Extension(ext.Extension):
         schema = super().get_config_schema()
         schema["applemusic_playlists"] = config.List()
         schema["applemusic_users"] = config.List()
+
         schema["lastfm_username"] = config.String()
         schema["lastfm_password"] = config.String()
+        schema["fmspins_username"] = config.String()
+        schema["fmspins_password"] = config.String()
+        
         schema["lastfm_users"] = config.List()
         schema["spotify_users"] = config.List()
         schema["spotify_playlists"] = config.List()

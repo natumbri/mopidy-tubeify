@@ -1,4 +1,5 @@
 import re
+from bs4 import BeautifulSoup as bs
 
 from mopidy_tubeify import logger
 from mopidy_tubeify.serviceclient import ServiceClient
@@ -50,6 +51,36 @@ class FMSpins(ServiceClient):
             },
         },
     }
+ 
+    def __init__(self, proxy, headers, ytm_client, username, password):
+        super().__init__(proxy, headers, ytm_client)
+        self.username = username
+        self.password = password
+
+        LOGIN_URL = "https://auth.fmspins.com/auth/login" 
+
+        response = self.session.get(LOGIN_URL)
+        soup = bs(response.text, 'html.parser')
+
+        # Find the authenticity_token inside the form
+        try:
+            token = soup.find('meta', {'name': 'csrf-token'})['content']
+        except PrimaryError:
+            try:
+                # Attempt fallback action if primary fails
+                token = soup.find('input', {'name': 'authenticity_token'})['value']
+            except FallbackError:
+                logger.error("Failed to find token; cannot log in.")
+        
+        payload = {
+            'authenticity_token': token,
+            'user[login]': self.username,
+            'user[password]': self.password,
+            'user[remember_me]': 'true'
+        }
+
+        post_response = self.session.post(LOGIN_URL, data=payload)
+
 
     # listoflists end up here
     def get_playlists_details(self, playlists):
@@ -99,6 +130,7 @@ class FMSpins(ServiceClient):
     def get_playlist_tracks(self, playlist):
         match_playlist = re.match(r"^playlist-(?P<station>.{4})$", playlist)
         if match_playlist:
+            # logger.info(self.service_endpoint.replace("//",f"//{match_playlist['station']}."))
             data = self.session.get(self.service_endpoint.replace("//",f"//{match_playlist['station']}."))
             tracks = [
                 {
@@ -138,7 +170,7 @@ class FMSpins(ServiceClient):
 
         return []        
 
-    def get_service_homepage(self):
+    def get_service_homepage(self, endpoint="?switch=1"):
         return [
             {
                 "name": station.a["href"].replace("/station/", "")
@@ -146,17 +178,25 @@ class FMSpins(ServiceClient):
                 + station.text,
                 "id": f'listoflists-{station.a["href"]}',
             }
-            for station in self._get_items_soup("", "stations")
+            for station in self._get_items_soup(endpoint, "stations")
         ]
 
 
 if __name__ == "__main__":
+    
     headers = {
         "User-Agent": r"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
     }
     from ytmusicapi import YTMusic
+    import argparse
 
-    scraper = FMSpins(None, headers, YTMusic())
+    parser = argparse.ArgumentParser(description="FMSpins login details")
+    parser.add_argument('--username', required=True, help='FMSpins Username (email)')
+    parser.add_argument('--password', required=True, help='FMSpins Password')
+    
+    args = parser.parse_args()
+
+    scraper = FMSpins(None, headers, YTMusic(), username=args.username, password=args.password)
     homepage = scraper.get_service_homepage()
     print(homepage)
     gpd = scraper.get_playlists_details([homepage[0]["id"][12:]])
