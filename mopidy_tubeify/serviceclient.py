@@ -57,7 +57,6 @@ class ServiceClient(Client):
 
         # with open('/tmp/output.html', 'w', encoding='utf-8') as file:
         #     file.write(str(soup))
-
         if soup:
             if "container" in schema:
                 soup = soup.find(**schema["container"])

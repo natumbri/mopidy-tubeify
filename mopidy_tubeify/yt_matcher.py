@@ -229,30 +229,6 @@ def _do_search_and_match(
     `str` `isrc` :  code for identifying sound recordings and music video recordings
     RETURNS `str` : videoId of the best match
     """
-    song_title = f"{', '.join(song_artists)} - {song_name}".lower()
-
-    # if isrc is not None then we try to find song with it
-    if isrc is not None:
-        sorted_isrc_results = []
-        try:
-            isrc_results = ytmusic.search(f'"{isrc}"')
-
-            # make sure the isrc result is relevant
-            sorted_isrc_results = _order_yt_results(
-                isrc_results, song_name, song_artists, song_title, song_duration
-            )
-        except Exception as e:
-            logger.warn(
-                f"_do_search_and_match error {e} with isrc {isrc} ({song_name})"
-            )
-
-        if sorted_isrc_results:
-            return sorted_isrc_results[0]["result"]
-        else:
-            logger.warn(f"No suitable result for isrc {isrc}")
-            logger.warn(
-                f"search for {song_name}, {song_artists}, {song_duration}"
-            )
 
     if videoId:
         sorted_videoId_results = []
@@ -282,6 +258,31 @@ def _do_search_and_match(
             return sorted_videoId_results[0]["result"]
         else:
             logger.warn(f"No suitable result for videoId {videoId}")
+            logger.warn(
+                f"search for {song_name}, {song_artists}, {song_duration}"
+            )
+
+    song_title = f"{', '.join(song_artists)} - {song_name}".lower()
+
+    # if isrc is not None then we try to find song with it
+    if isrc is not None:
+        sorted_isrc_results = []
+        try:
+            isrc_results = ytmusic.search(f'"{isrc}"')
+
+            # make sure the isrc result is relevant
+            sorted_isrc_results = _order_yt_results(
+                isrc_results, song_name, song_artists, song_title, song_duration
+            )
+        except Exception as e:
+            logger.warn(
+                f"_do_search_and_match error {e} with isrc {isrc} ({song_name})"
+            )
+
+        if sorted_isrc_results:
+            return sorted_isrc_results[0]["result"]
+        else:
+            logger.warn(f"No suitable result for isrc {isrc}")
             logger.warn(
                 f"search for {song_name}, {song_artists}, {song_duration}"
             )
@@ -460,7 +461,7 @@ def _order_yt_results(
                 # ! something like _match_percentage('rionos', 'aiobahn,
                 # ! rionos Motivation(remix)' would return 100, so we're
                 # ! absolutely corrent in matching artists to song name.
-                if result["artists"]:
+                if result.get("artists"):
                     for result_artist in result["artists"]:
                         if _match_percentage(
                             str(

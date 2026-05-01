@@ -22,6 +22,7 @@ from mopidy_tubeify.kcrw import KCRW
 from mopidy_tubeify.musicreviewworld import MusicReviewWorld
 from mopidy_tubeify.nme import NME
 from mopidy_tubeify.npr import NPR
+from mopidy_tubeify.paste import Paste
 from mopidy_tubeify.pitchfork import Pitchfork
 from mopidy_tubeify.rollingstone import RollingStone
 from mopidy_tubeify.spotify import Spotify
@@ -72,6 +73,7 @@ class TubeifyBackend(pykka.ThreadingActor, backend.Backend):
             MusicReviewWorld,
             NME,
             NPR,
+            Paste,
             Pitchfork,
             RollingStone,
             Spotify,
